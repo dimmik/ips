@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Code Generator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1, h2 {
+            color: #333;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .template-form, .import-form, .templates-list {
+            background-color: #f5f5f5;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .template-item {
+            background-color: white;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        .template-actions {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+        }
+        .template-actions-left {
+            display: flex;
+            gap: 10px;
+        }
+        .qr-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 15px;
+        }
+        .qr-link {
+            margin-top: 10px;
+            word-break: break-all;
+        }
+        .error {
+            color: red;
+            margin-top: 5px;
+        }
+        .hidden {
+            display: none;
+        }
+        .delete-btn {
+            background-color: #f44336;
+        }
+        .delete-btn:hover {
+            background-color: #d32f2f;
+        }
+        .edit-btn {
+            background-color: #2196F3;
+        }
+        .edit-btn:hover {
+            background-color: #0b7dda;
+        }
+        .generate-btn {
+            background-color: #ff9800;
+        }
+        .generate-btn:hover {
+            background-color: #e68a00;
+        }
+        .amount-input {
+            width: 100px;
+            margin-right: 10px;
+        }
+        .qr-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .template-details {
+            margin-bottom: 10px;
+        }
+        .template-detail {
+            margin: 5px 0;
+        }
+        
+        @media (max-width: 768px) {
+            .template-actions {
+                flex-direction: column;
+                gap: 10px;
+            }
+            .template-actions-left {
+                flex-wrap: wrap;
+            }
+            button {
+                margin-bottom: 5px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>QR Code Generator</h1>
+    
+    <div class="container">
+        <!-- Templates list now comes first -->
+        <div class="templates-list">
+            <h2>Your Templates</h2>
+            <div id="templatesList"></div>
+        </div>
+        
+        <div class="template-form">
+            <h2>Create New Template</h2>
+            <div class="form-group">
+                <label for="formAccountNumber">Account Number (R):</label>
+                <input type="text" id="formAccountNumber" placeholder="e.g., 265000000589185961">
+            </div>
+            <div class="form-group">
+                <label for="formRecipientName">Recipient Name (N):</label>
+                <input type="text" id="formRecipientName" placeholder="e.g., Mihail Golubtsov">
+            </div>
+            <div class="form-group">
+                <label for="formSF">SF Value:</label>
+                <input type="text" id="formSF" placeholder="289" value="289">
+            </div>
+            <div class="form-group">
+                <label for="formPaymentPurpose">Payment Purpose (S):</label>
+                <input type="text" id="formPaymentPurpose" placeholder="e.g., Placanie racuna xxx">
+            </div>
+            <button onclick="createTemplate()">Save Template</button>
+        </div>
+        
+        <div class="import-form">
+            <h2>Import Template from String</h2>
+            <div class="form-group">
+                <label for="importString">Template String:</label>
+                <input type="text" id="importString" placeholder="K:PR|V:01|C:1|R:265000000589185961|N:aaa bbb|I:RSD34,00|SF:289|S:asdfasdf">
+            </div>
+            <button onclick="importTemplate()">Import</button>
+            <p id="importError" class="error hidden"></p>
+        </div>
+    </div>
+
+    <script>
+        // Get templates from cookies or initialize empty array
+        let templates = [];
+        
+        // Load templates on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadTemplates();
+            
+            // Check if there's a template ID in the URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const templateId = urlParams.get('template');
+            const amount = urlParams.get('amount');
+            
+            if (templateId) {
+                const template = templates.find(t => t.id === templateId);
+                if (template) {
+                    const amountToUse = amount || '';
+                    generateQRCode(template, amountToUse);
+                }
+            }
+        });
+        
+        function loadTemplates() {
+            const storedTemplates = getCookie('qrTemplates');
+            if (storedTemplates) {
+                templates = JSON.parse(storedTemplates);
+                renderTemplates();
+            }
+        }
+        
+        function saveTemplates() {
+            setCookie('qrTemplates', JSON.stringify(templates), 365);
+            renderTemplates();
+        }
+        
+        function createTemplate() {
+            const accountNumber = document.getElementById('formAccountNumber').value.trim();
+            const recipientName = document.getElementById('formRecipientName').value.trim();
+            const sf = document.getElementById('formSF').value.trim() || '289';
+            const paymentPurpose = document.getElementById('formPaymentPurpose').value.trim();
+            
+            if (!accountNumber || !recipientName || !paymentPurpose) {
+                alert('Please fill in all required fields');
+                return;
+            }
+            
+            const template = {
+                id: generateId(),
+                accountNumber: accountNumber,
+                recipientName: recipientName,
+                sf: sf,
+                paymentPurpose: paymentPurpose
+            };
+            
+            templates.push(template);
+            saveTemplates();
+            
+            // Clear form
+            document.getElementById('formAccountNumber').value = '';
+            document.getElementById('formRecipientName').value = '';
+            document.getElementById('formSF').value = '289';
+            document.getElementById('formPaymentPurpose').value = '';
+        }
+        
+        function importTemplate() {
+            const importStr = document.getElementById('importString').value.trim();
+            const errorElement = document.getElementById('importError');
+            
+            if (!importStr) {
+                showError(errorElement, 'Please enter a template string');
+                return;
+            }
+            
+            try {
+                const parts = importStr.split('|');
+                const template = {
+                    id: generateId(),
+                    accountNumber: '',
+                    recipientName: '',
+                    sf: '289',
+                    paymentPurpose: ''
+                };
+                
+                for (const part of parts) {
+                    const [key, value] = part.split(':');
+                    
+                    if (key === 'R') {
+                        template.accountNumber = value;
+                    } else if (key === 'N') {
+                        template.recipientName = value;
+                    } else if (key === 'SF') {
+                        template.sf = value;
+                    } else if (key === 'S') {
+                        template.paymentPurpose = value;
+                    }
+                }
+                
+                if (!template.accountNumber || !template.recipientName || !template.paymentPurpose) {
+                    showError(errorElement, 'Invalid template string. Missing required fields.');
+                    return;
+                }
+                
+                templates.push(template);
+                saveTemplates();
+                document.getElementById('importString').value = '';
+                errorElement.classList.add('hidden');
+                
+            } catch (e) {
+                showError(errorElement, 'Invalid template string format');
+            }
+        }
+        
+        function showError(element, message) {
+            element.textContent = message;
+            element.classList.remove('hidden');
+        }
+        
+        function deleteTemplate(id) {
+            templates = templates.filter(t => t.id !== id);
+            saveTemplates();
+        }
+        
+        function editTemplate(id) {
+            const template = templates.find(t => t.id === id);
+            if (!template) return;
+            
+            document.getElementById('formAccountNumber').value = template.accountNumber;
+            document.getElementById('formRecipientName').value = template.recipientName;
+            document.getElementById('formSF').value = template.sf;
+            document.getElementById('formPaymentPurpose').value = template.paymentPurpose;
+            
+            // Delete the old template
+            deleteTemplate(id);
+            
+            // Scroll to the form
+            document.querySelector('.template-form').scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        function generateQRCode(template, amount = '') {
+            const templateElement = document.getElementById(`template-${template.id}`);
+            const qrSection = templateElement.querySelector('.qr-section');
+            
+            // Clear existing QR code
+            qrSection.innerHTML = '';
+            
+            // Validate amount
+            if (!amount) {
+                qrSection.innerHTML = '<p class="error">Please enter an amount</p>';
+                return;
+            }
+            
+            if (!/^\d+([,.]\d{1,2})?$/.test(amount)) {
+                qrSection.innerHTML = '<p class="error">Please enter a valid amount (numbers only)</p>';
+                return;
+            }
+            
+            // Format amount properly
+            let formattedAmount = amount.replace(',', '.');
+            if (!formattedAmount.includes('.')) {
+                formattedAmount += '.00';
+            } else if (formattedAmount.split('.')[1].length === 1) {
+                formattedAmount += '0';
+            }
+            
+            // Create QR code string
+            const qrString = `K:PR|V:01|C:1|R:${template.accountNumber}|N:${template.recipientName}|I:RSD${formattedAmount.replace('.', ',')}|SF:${template.sf}|S:${template.paymentPurpose}`;
+            
+            // Create QR code container
+            const qrContainer = document.createElement('div');
+            qrContainer.className = 'qr-container';
+            qrSection.appendChild(qrContainer);
+            
+            // Create QR code
+            const qrElement = document.createElement('div');
+            qrContainer.appendChild(qrElement);
+            
+            new QRCode(qrElement, {
+                text: qrString,
+                width: 180,
+                height: 180
+            });
+            
+            // Add a copy button
+            const copyButton = document.createElement('button');
+            copyButton.textContent = 'Copy QR String';
+            copyButton.style.marginTop = '10px';
+            copyButton.onclick = function() {
+                navigator.clipboard.writeText(qrString).then(() => {
+                    copyButton.textContent = 'Copied!';
+                    setTimeout(() => {
+                        copyButton.textContent = 'Copy QR String';
+                    }, 2000);
+                });
+            };
+            qrContainer.appendChild(copyButton);
+            
+            // Add shareable link
+            const shareableLink = `${window.location.href.split('?')[0]}?template=${template.id}&amount=${formattedAmount}`;
+            const linkElement = document.createElement('div');
+            linkElement.className = 'qr-link';
+            linkElement.innerHTML = `<strong>Direct link:</strong> <a href="${shareableLink}" target="_blank">${shareableLink}</a>`;
+            qrContainer.appendChild(linkElement);
+        }
+        
+        function renderTemplates() {
+            const templatesList = document.getElementById('templatesList');
+            templatesList.innerHTML = '';
+            
+            if (templates.length === 0) {
+                templatesList.innerHTML = '<p>No templates yet. Create one below.</p>';
+                return;
+            }
+            
+            templates.forEach(template => {
+                const templateElement = document.createElement('div');
+                templateElement.className = 'template-item';
+                templateElement.id = `template-${template.id}`;
+                
+                const templateDetailsElement = document.createElement('div');
+                templateDetailsElement.className = 'template-details';
+                templateDetailsElement.innerHTML = `
+                    <div class="template-detail"><strong>Account:</strong> ${template.accountNumber}</div>
+                    <div class="template-detail"><strong>Recipient:</strong> ${template.recipientName}</div>
+                    <div class="template-detail"><strong>SF:</strong> ${template.sf}</div>
+                    <div class="template-detail"><strong>Purpose:</strong> ${template.paymentPurpose}</div>
+                `;
+                templateElement.appendChild(templateDetailsElement);
+                
+                const templateActions = document.createElement('div');
+                templateActions.className = 'template-actions';
+                
+                const actionsLeft = document.createElement('div');
+                actionsLeft.className = 'template-actions-left';
+                
+                const deleteButton = document.createElement('button');
+                deleteButton.className = 'delete-btn';
+                deleteButton.textContent = 'Delete';
+                deleteButton.onclick = () => deleteTemplate(template.id);
+                actionsLeft.appendChild(deleteButton);
+                
+                const editButton = document.createElement('button');
+                editButton.className = 'edit-btn';
+                editButton.textContent = 'Edit';
+                editButton.onclick = () => editTemplate(template.id);
+                actionsLeft.appendChild(editButton);
+                
+                templateActions.appendChild(actionsLeft);
+                
+                const actionsRight = document.createElement('div');
+                actionsRight.className = 'template-actions-right';
+                
+                const amountInput = document.createElement('input');
+                amountInput.type = 'text';
+                amountInput.className = 'amount-input';
+                amountInput.placeholder = 'Amount';
+                amountInput.onkeypress = (e) => {
+                    const char = String.fromCharCode(e.charCode);
+                    // Allow digits, comma, period
+                    if (!/[\d.,]/.test(char)) {
+                        e.preventDefault();
+                    }
+                };
+                actionsRight.appendChild(amountInput);
+                
+                const generateButton = document.createElement('button');
+                generateButton.className = 'generate-btn';
+                generateButton.textContent = 'Generate QR';
+                generateButton.onclick = () => generateQRCode(template, amountInput.value);
+                actionsRight.appendChild(generateButton);
+                
+                templateActions.appendChild(actionsRight);
+                templateElement.appendChild(templateActions);
+                
+                const qrSection = document.createElement('div');
+                qrSection.className = 'qr-section';
+                templateElement.appendChild(qrSection);
+                
+                templatesList.appendChild(templateElement);
+            });
+        }
+        
+        function generateId() {
+            return Math.random().toString(36).substring(2, 10);
+        }
+        
+        function setCookie(name, value, days) {
+            const d = new Date();
+            d.setTime(d.getTime() + (days * 24 * 60 * 60 * 1000));
+            const expires = "expires=" + d.toUTCString();
+            document.cookie = name + "=" + value + ";" + expires + ";path=/";
+        }
+        
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+        }
+    </script>
+</body>
+</html>
