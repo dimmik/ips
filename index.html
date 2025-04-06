@@ -202,6 +202,7 @@
             <div class="tab active" data-tab="templates">Templates</div>
             <div class="tab" data-tab="add-template">Add Template</div>
             <div class="tab" data-tab="import-template">Import Template</div>
+            <div class="tab" data-tab="qr-code">QR-code</div>
         </div>
         
         <div id="templates" class="tab-content active">
@@ -262,9 +263,17 @@
                 <h2>Import Template from String</h2>
                 <div class="form-group">
                     <label for="import-string">Template String:</label>
-                    <textarea id="import-string" rows="3" placeholder="K:PR|V:01|C:1|R:265000000589185961|N:Mihail Golubtsov|I:RSD200,00|SF:289|S:Placanie racuna xxx"></textarea>
+                    <textarea id="import-string" rows="3" placeholder="K:PR|V:01|C:1|R:265000000999999999|N:Some One|I:RSD200,00|SF:289|S:Placanie racuna"></textarea>
                 </div>
                 <button id="import-btn">Import Template</button>
+            </div>
+        </div>
+        <div id="qr-code" class="tab-content">
+            <div class="card">
+                <h2>QR Code</h2>
+                <div id="any-qr-code-string">N/A</div>
+                <div id="any-qr-code">
+                </div>
             </div>
         </div>
         
@@ -318,8 +327,28 @@
             loadTemplates();
             renderTemplates();
             setupEventListeners();
+            processDirectLink()
+            
         }
-
+        function processDirectLink(){
+            const search = window.location.search;
+            params = new URLSearchParams(search);
+            qr = params.get('qr');
+            if (qr) {
+                document.getElementById("any-qr-code-string").innerHTML=qr;
+                elem = document.getElementById("any-qr-code");
+                // Generate QR code
+                new QRCode(elem, {
+                    text: qr,
+                    width: 200,
+                    height: 200,
+                    colorDark: "#000000",
+                    colorLight: "#ffffff",
+                    correctLevel: QRCode.CorrectLevel.H
+                });
+                showTab("qr-code")
+            }
+        }
         // Load templates from cookies
         function loadTemplates() {
             const savedTemplates = getCookie('paymentTemplates');
@@ -574,7 +603,7 @@
             // Display the formatted string
             const qrTextElement = document.createElement('div');
             qrTextElement.className = 'qr-text';
-            qrTextElement.textContent = qrString;
+            qrTextElement.innerHTML = "<a href='?qr=" + qrString + "' target='_blank'>"+qrString + "</a>";
             qrCodeElement.appendChild(qrTextElement);
             
             // Generate QR code
