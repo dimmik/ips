@@ -95,7 +95,7 @@
         }
         .template-item {
             padding: 15px;
-            margin-bottom: 10px;
+            margin-bottom: 20px;
             background-color: #f9f9f9;
             border-radius: 5px;
             border: 1px solid #eee;
@@ -152,6 +152,20 @@
         .close:hover {
             color: black;
         }
+        .template-generate-form {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            align-items: center;
+        }
+        .template-generate-form input {
+            max-width: 150px;
+        }
+        .info-text {
+            font-size: 14px;
+            color: #666;
+            margin-top: 3px;
+        }
         @media (max-width: 600px) {
             .container {
                 padding: 10px;
@@ -163,6 +177,14 @@
             .modal-content {
                 width: 95%;
                 margin: 10% auto;
+            }
+            .template-generate-form {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .template-generate-form input {
+                max-width: 100%;
+                margin-bottom: 10px;
             }
         }
     </style>
@@ -195,8 +217,9 @@
             </div>
             
             <div class="form-group">
-                <label for="amount">Сумма (I):</label>
-                <input type="text" id="amount" placeholder="Например: RSD200,00">
+                <label for="amount">Сумма:</label>
+                <input type="number" id="amount" placeholder="Введите сумму">
+                <div class="info-text">Будет отформатировано как RSD[сумма],00</div>
             </div>
             
             <div class="form-group">
@@ -274,6 +297,11 @@
             loadTemplatesFromCookies();
             updateTemplatesList();
             updateTemplateSelect();
+            
+            // Format amount input to only allow numbers
+            amountInput.addEventListener('input', function(e) {
+                this.value = this.value.replace(/[^0-9]/g, '');
+            });
         });
         
         // Tab functionality
@@ -289,7 +317,9 @@
         });
         
         // QR Code generation
-        generateQrBtn.addEventListener('click', generateQrCode);
+        generateQrBtn.addEventListener('click', () => {
+            generateQrCode(amountInput.value);
+        });
         
         // Template functionality
         saveTemplateBtn.addEventListener('click', () => {
@@ -316,8 +346,11 @@
         });
         
         // Functions
-        function generateQrCode() {
-            const qrString = buildQrString();
+        function generateQrCode(amount) {
+            // Format amount as "RSD{amount},00"
+            const formattedAmount = amount ? `RSD${amount},00` : '';
+            
+            const qrString = buildQrString(formattedAmount);
             
             // Clear previous QR code
             qrcodeContainer.innerHTML = '';
@@ -336,13 +369,13 @@
             qrStringContainer.innerText = qrString;
         }
         
-        function buildQrString() {
+        function buildQrString(formattedAmount) {
             // Format:
             // K:PR|V:01|C:1|R:счёт|N:имя получателя|I:Сумма с указанием валюты|P:Имя отправителя|SF:289|S:Назначение платежа
             
             const account = accountInput.value.trim();
             const recipient = recipientInput.value.trim();
-            const amount = amountInput.value.trim();
+            const amount = formattedAmount || '';
             const sender = senderInput.value.trim();
             const sf = sfInput.value.trim();
             const purpose = purposeInput.value.trim();
@@ -421,6 +454,12 @@
                     <p><strong>Отправитель:</strong> ${template.sender}</p>
                     <p><strong>SF:</strong> ${template.sf}</p>
                     <p><strong>Назначение:</strong> ${template.purpose}</p>
+                    
+                    <div class="template-generate-form">
+                        <input type="number" class="template-amount" placeholder="Введите сумму" data-id="${template.id}">
+                        <button class="generate-from-template" data-id="${template.id}">Сгенерировать QR-код</button>
+                    </div>
+                    
                     <div class="template-actions">
                         <button class="edit-template" data-id="${template.id}">Редактировать</button>
                         <button class="delete-template danger" data-id="${template.id}">Удалить</button>
@@ -449,6 +488,46 @@
                     if (confirm('Вы уверены, что хотите удалить этот шаблон?')) {
                         deleteTemplate(templateId);
                     }
+                });
+            });
+            
+            // Add event listeners for amount inputs
+            document.querySelectorAll('.template-amount').forEach(input => {
+                input.addEventListener('input', function(e) {
+                    this.value = this.value.replace(/[^0-9]/g, '');
+                });
+            });
+            
+            // Add event listeners for generate from template buttons
+            document.querySelectorAll('.generate-from-template').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const templateId = e.target.getAttribute('data-id');
+                    const template = templates.find(t => t.id === templateId);
+                    if (!template) return;
+                    
+                    // Get the amount from the input
+                    const amountInput = document.querySelector(`.template-amount[data-id="${templateId}"]`);
+                    const amount = amountInput.value.trim();
+                    
+                    if (!amount) {
+                        alert('Пожалуйста, введите сумму');
+                        return;
+                    }
+                    
+                    // Load template data to the form
+                    loadTemplateData(templateId);
+                    
+                    // Set the amount
+                    document.getElementById('amount').value = amount;
+                    
+                    // Generate QR code
+                    generateQrCode(amount);
+                    
+                    // Switch to generate tab
+                    tabs[0].click();
+                    
+                    // Select template in dropdown
+                    templateSelect.value = templateId;
                 });
             });
         }
