@@ -338,11 +338,11 @@
                 <h2>Import Template</h2>
                 <div class="form-group">
                     <label for="import-template-name">Template Name:</label>
-                    <input type="text" id="import-template-name" placeholder="Enter template name" required>
+                    <input type="text" id="import-template-name" placeholder="Enter template name">
                 </div>
                 <div class="form-group">
                     <label for="import-string">Template String:</label>
-                    <textarea id="import-string" rows="3" placeholder="K:PR|V:01|C:1|R:265000000999999999|N:Some One|I:RSD200,00|SF:289|S:Placanie racuna"></textarea>
+                    <textarea id="import-string" rows="3" placeholder="K:PR|V:01|C:1|R:265000000999999999|N:Some One|I:RSD200,00|SF:289|S:Placanje racuna"></textarea>
                 </div>
                 <button id="import-btn">Import Template</button>
             </div>
@@ -401,6 +401,8 @@
         const editTemplateForm = document.getElementById('edit-template-form');
         const importBtn = document.getElementById('import-btn');
         const cancelEditBtn = document.getElementById('cancel-edit');
+        const importString = document.getElementById('import-string');
+        const importTemplateName = document.getElementById('import-template-name');
 
         // Store templates in this array and sync with cookies
         let templates = [];
@@ -552,6 +554,21 @@
             // Import template button
             importBtn.addEventListener('click', importTemplate);
             
+            // Template string input - populate template name when string is entered
+            importString.addEventListener('input', () => {
+                // If the template name is empty and template string is entered, try to extract payer name
+                if (!importTemplateName.value.trim()) {
+                    try {
+                        const template = parseTemplateString(importString.value.trim());
+                        if (template && template.n) {
+                            importTemplateName.value = template.n;
+                        }
+                    } catch (e) {
+                        // Ignore parsing errors while typing
+                    }
+                }
+            });
+            
             // Template actions (edit, delete, generate QR)
             templatesList.addEventListener('click', (e) => {
                 if (e.target.classList.contains('edit-btn')) {
@@ -630,17 +647,22 @@
         // Import template from string
         function importTemplate() {
             const importString = document.getElementById('import-string').value.trim();
-            const templateName = document.getElementById('import-template-name').value.trim();
+            let templateName = document.getElementById('import-template-name').value.trim();
             
-            if (!importString || !templateName) {
-                alert('Please enter both a template name and a template string.');
+            if (!importString) {
+                alert('Please enter a template string.');
                 return;
             }
             
             try {
                 const template = parseTemplateString(importString);
                 if (template) {
-                    template.template_name = templateName;
+                    // If template name is empty, use the payer name (N field)
+                    if (!templateName && template.n) {
+                        templateName = template.n;
+                    }
+                    
+                    template.template_name = templateName || 'Unnamed Template';
                     templates.push(template);
                     saveTemplates();
                     renderTemplates();
