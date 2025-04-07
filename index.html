@@ -27,38 +27,47 @@
             background-color: var(--background-color);
             color: var(--text-color);
             line-height: 1.6;
-            padding: 20px;
-            max-width: 1200px;
+            padding: 10px;
+            max-width: 100%;
             margin: 0 auto;
         }
 
         h1, h2, h3 {
             color: var(--secondary-color);
-            margin-bottom: 15px;
+            margin-bottom: 10px;
+            font-size: 1.5rem;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            text-align: center;
         }
 
         .container {
             display: flex;
             flex-direction: column;
-            gap: 20px;
+            gap: 15px;
+            max-width: 600px;
+            margin: 0 auto;
         }
 
         .card {
             background: var(--card-color);
             border-radius: 8px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            padding: 20px;
-            margin-bottom: 20px;
+            padding: 15px;
+            margin-bottom: 15px;
         }
 
         .form-group {
-            margin-bottom: 15px;
+            margin-bottom: 12px;
         }
 
         label {
             display: block;
-            margin-bottom: 5px;
+            margin-bottom: 4px;
             font-weight: bold;
+            font-size: 0.9rem;
         }
 
         input, textarea {
@@ -78,6 +87,7 @@
             cursor: pointer;
             font-size: 16px;
             transition: background-color 0.3s;
+            min-height: 44px; /* Better touch target */
         }
 
         button:hover {
@@ -90,13 +100,18 @@
             flex-wrap: wrap;
         }
 
+        .table-responsive {
+            overflow-x: auto;
+        }
+
         table {
             width: 100%;
             border-collapse: collapse;
+            font-size: 0.9rem;
         }
 
         th, td {
-            padding: 12px 8px;
+            padding: 8px 6px;
             text-align: left;
             border-bottom: 1px solid var(--border-color);
         }
@@ -114,17 +129,16 @@
             background-color: #f0f0f0;
         }
 
-        .actionsxx {
-            display: flex;
-            gap: 8px;
-        }
-
         .edit-btn {
             background-color: #4caf50;
+            padding: 6px 10px;
+            font-size: 0.85rem;
         }
 
         .delete-btn {
             background-color: #f44336;
+            padding: 6px 10px;
+            font-size: 0.85rem;
         }
 
         .qr-code-container {
@@ -132,41 +146,33 @@
             flex-direction: column;
             align-items: center;
             margin-top: 10px;
+            width: 100%;
         }
 
         .amount-input {
-            width: 120px;
+            width: 80px;
             text-align: right;
-        }
-
-        @media (max-width: 768px) {
-            .table-container {
-                overflow-x: auto;
-            }
-            
-            .button-group {
-                flex-direction: column;
-            }
-            
-            button {
-                width: 100%;
-            }
+            padding: 6px;
+            font-size: 0.9rem;
         }
 
         .tabs {
             display: flex;
             border-bottom: 1px solid var(--border-color);
-            margin-bottom: 20px;
+            margin-bottom: 15px;
+            overflow-x: auto;
+            white-space: nowrap;
         }
 
         .tab {
-            padding: 10px 20px;
+            padding: 8px 15px;
             cursor: pointer;
             border: 1px solid transparent;
             border-bottom: none;
             border-radius: 5px 5px 0 0;
             background-color: #e0e0e0;
-            margin-right: 5px;
+            margin-right: 3px;
+            font-size: 0.9rem;
         }
 
         .tab.active {
@@ -192,33 +198,95 @@
             margin: 10px 0;
             text-align: center;
         }
+        
+        .generate-qr {
+            padding: 6px 10px;
+            font-size: 0.85rem;
+        }
+        
+        .qr-text {
+            margin-top: 10px;
+            font-size: 0.8rem;
+            word-break: break-all;
+            max-width: 100%;
+        }
+        
+        .qr-link {
+            color: var(--secondary-color);
+            text-decoration: none;
+        }
+        
+        .qr-link:hover {
+            text-decoration: underline;
+        }
+        
+        .action-cell {
+            white-space: nowrap;
+        }
+        
+        .template-info {
+            font-size: 0.8rem;
+            color: #666;
+            margin-top: 2px;
+        }
+        
+        .tab-label {
+            display: inline-block;
+        }
+        
+        @media (max-width: 480px) {
+            .tab {
+                padding: 8px 12px;
+                font-size: 0.85rem;
+            }
+            
+            .button-group button {
+                width: 100%;
+            }
+            
+            body {
+                padding: 5px;
+            }
+            
+            th, td {
+                padding: 6px 4px;
+                font-size: 0.85rem;
+            }
+            
+            .template-actions {
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+            }
+            
+            .edit-btn, .delete-btn, .generate-qr {
+                width: 100%;
+                margin-top: 2px;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>QR Code Generator for Payments</h1>
+        <h1>QR Code Generator</h1>
         
         <div class="tabs">
-            <div class="tab active" data-tab="templates">...</div>
-            <div class="tab" data-tab="add-template">+</div>
-            <div class="tab" data-tab="import-template">I</div>
-            <div class="tab" data-tab="edit-template-container">E</div>
-            <div class="tab" data-tab="qr-code">Q</div>
+            <div class="tab active" data-tab="templates"><span class="tab-label">Templates</span></div>
+            <div class="tab" data-tab="add-template"><span class="tab-label">Add New</span></div>
+            <div class="tab" data-tab="import-template"><span class="tab-label">Import</span></div>
+            <div class="tab" data-tab="edit-template-container"><span class="tab-label">Edit</span></div>
+            <div class="tab" data-tab="qr-code"><span class="tab-label">QR Code</span></div>
         </div>
         
         <div id="templates" class="tab-content active">
             <div class="card">
                 <h2>Your Templates</h2>
-                <div class="table-container">
+                <div class="table-responsive">
                     <table id="templates-table">
                         <thead>
                             <tr>
-                                <th>Name</th>
-                                <!--
-                                <th>Account Number</th>
-                                <th>Payment Purpose</th>
-                                -->
-                                <th>Amount (RSD)</th>
+                                <th>Template</th>
+                                <th>Amount</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -237,6 +305,10 @@
             <div class="card">
                 <h2>Add New Template</h2>
                 <form id="template-form">
+                    <div class="form-group">
+                        <label for="template-name">Template Name:</label>
+                        <input type="text" id="template-name" required>
+                    </div>
                     <div class="form-group">
                         <label for="r-field">Account Number (R):</label>
                         <input type="text" id="r-field" required>
@@ -263,7 +335,11 @@
         
         <div id="import-template" class="tab-content">
             <div class="card">
-                <h2>Import Template from String</h2>
+                <h2>Import Template</h2>
+                <div class="form-group">
+                    <label for="import-template-name">Template Name:</label>
+                    <input type="text" id="import-template-name" placeholder="Enter template name" required>
+                </div>
                 <div class="form-group">
                     <label for="import-string">Template String:</label>
                     <textarea id="import-string" rows="3" placeholder="K:PR|V:01|C:1|R:265000000999999999|N:Some One|I:RSD200,00|SF:289|S:Placanie racuna"></textarea>
@@ -271,12 +347,12 @@
                 <button id="import-btn">Import Template</button>
             </div>
         </div>
+        
         <div id="qr-code" class="tab-content">
             <div class="card">
                 <h2>QR Code</h2>
-                <div id="any-qr-code-string">N/A</div>
-                <div id="any-qr-code">
-                </div>
+                <div id="any-qr-code-string" class="qr-text">N/A</div>
+                <div id="any-qr-code" class="qr-preview"></div>
             </div>
         </div>
         
@@ -285,6 +361,10 @@
                 <h2>Edit Template</h2>
                 <form id="edit-template-form">
                     <input type="hidden" id="edit-index">
+                    <div class="form-group">
+                        <label for="edit-template-name">Template Name:</label>
+                        <input type="text" id="edit-template-name" required>
+                    </div>
                     <div class="form-group">
                         <label for="edit-r-field">Account Number (R):</label>
                         <input type="text" id="edit-r-field" required>
@@ -330,16 +410,18 @@
             loadTemplates();
             renderTemplates();
             setupEventListeners();
-            processDirectLink()
-            
+            processDirectLink();
         }
-        function processDirectLink(){
+
+        function processDirectLink() {
             const search = window.location.search;
             params = new URLSearchParams(search);
             qr = params.get('qr');
             if (qr) {
-                document.getElementById("any-qr-code-string").innerHTML=qr;
+                document.getElementById("any-qr-code-string").innerHTML = `<a href='?qr=${qr}' class="qr-link" target='_blank'>${qr}</a>`;
                 elem = document.getElementById("any-qr-code");
+                // Clear existing content
+                elem.innerHTML = '';
                 // Generate QR code
                 new QRCode(elem, {
                     text: qr,
@@ -349,15 +431,24 @@
                     colorLight: "#ffffff",
                     correctLevel: QRCode.CorrectLevel.H
                 });
-                showTab("qr-code")
+                showTab("qr-code");
             }
         }
+
         // Load templates from cookies
         function loadTemplates() {
             const savedTemplates = getCookie('paymentTemplates');
             if (savedTemplates) {
                 try {
                     templates = JSON.parse(savedTemplates);
+                    // Update old templates without template_name to include it
+                    templates = templates.map(template => {
+                        if (!template.template_name) {
+                            template.template_name = template.n;
+                        }
+                        return template;
+                    });
+                    saveTemplates(); // Save updated templates
                 } catch (e) {
                     console.error('Error parsing templates from cookie:', e);
                     templates = [];
@@ -400,14 +491,19 @@
                 const row = document.createElement('tr');
                 row.className = 'template-row';
                 row.innerHTML = `
-                    <td>${template.n}</td>
+                    <td>
+                        <div>${template.template_name}</div>
+                        <div class="template-info">${template.n} - ${template.r}</div>
+                    </td>
                     <td>
                         <input type="number" class="amount-input" data-index="${index}" min="0.01" step="0.01" value="100">
-                        <button class="generate-qr" data-index="${index}">Generate QR</button>
                     </td>
-                    <td class="actions">
-                        <button class="edit-btn" data-index="${index}">Edit</button>
-                        <button class="delete-btn" data-index="${index}">Del</button>
+                    <td class="action-cell">
+                        <div class="template-actions">
+                            <button class="generate-qr" data-index="${index}">QR</button>
+                            <button class="edit-btn" data-index="${index}">Edit</button>
+                            <button class="delete-btn" data-index="${index}">Del</button>
+                        </div>
                     </td>
                 `;
                 
@@ -415,7 +511,7 @@
                 const qrRow = document.createElement('tr');
                 qrRow.className = 'qr-row hidden';
                 qrRow.id = `qr-container-${index}`;
-                qrRow.innerHTML = `<td colspan="5"><div class="qr-code-container" id="qr-code-${index}"></div></td>`;
+                qrRow.innerHTML = `<td colspan="3"><div class="qr-code-container" id="qr-code-${index}"></div></td>`;
                 
                 templatesList.appendChild(row);
                 templatesList.appendChild(qrRow);
@@ -478,6 +574,7 @@
         // Add a new template
         function addTemplate() {
             const template = {
+                template_name: document.getElementById('template-name').value,
                 r: document.getElementById('r-field').value,
                 n: document.getElementById('n-field').value,
                 sf: document.getElementById('sf-field').value,
@@ -496,6 +593,7 @@
         function editTemplate(index) {
             const template = templates[index];
             document.getElementById('edit-index').value = index;
+            document.getElementById('edit-template-name').value = template.template_name || template.n;
             document.getElementById('edit-r-field').value = template.r;
             document.getElementById('edit-n-field').value = template.n;
             document.getElementById('edit-sf-field').value = template.sf;
@@ -508,6 +606,7 @@
         function updateTemplate() {
             const index = document.getElementById('edit-index').value;
             templates[index] = {
+                template_name: document.getElementById('edit-template-name').value,
                 r: document.getElementById('edit-r-field').value,
                 n: document.getElementById('edit-n-field').value,
                 sf: document.getElementById('edit-sf-field').value,
@@ -531,18 +630,22 @@
         // Import template from string
         function importTemplate() {
             const importString = document.getElementById('import-string').value.trim();
-            if (!importString) {
-                alert('Please enter a template string.');
+            const templateName = document.getElementById('import-template-name').value.trim();
+            
+            if (!importString || !templateName) {
+                alert('Please enter both a template name and a template string.');
                 return;
             }
             
             try {
                 const template = parseTemplateString(importString);
                 if (template) {
+                    template.template_name = templateName;
                     templates.push(template);
                     saveTemplates();
                     renderTemplates();
                     document.getElementById('import-string').value = '';
+                    document.getElementById('import-template-name').value = '';
                     showTab('templates');
                 }
             } catch (e) {
@@ -604,7 +707,7 @@
             // Display the formatted string
             const qrTextElement = document.createElement('div');
             qrTextElement.className = 'qr-text';
-            qrTextElement.innerHTML = "<a href='?qr=" + qrString + "' target='_blank'>"+qrString + "</a>";
+            qrTextElement.innerHTML = `<a href='?qr=${encodeURIComponent(qrString)}' class="qr-link" target='_blank'>${qrString}</a>`;
             qrCodeElement.appendChild(qrTextElement);
             
             // Generate QR code
