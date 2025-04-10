@@ -141,6 +141,11 @@
             font-size: 0.85rem;
         }
 
+        .store-btn {
+            background-color: #ff9800;
+            margin-top: 10px;
+        }
+
         .qr-code-container {
             display: flex;
             flex-direction: column;
@@ -232,6 +237,11 @@
         
         .tab-label {
             display: inline-block;
+        }
+
+        .template-name-input {
+            margin-top: 10px;
+            margin-bottom: 5px;
         }
         
         @media (max-width: 480px) {
@@ -353,6 +363,13 @@
                 <h2>QR Code</h2>
                 <div id="any-qr-code-string" class="qr-text">N/A</div>
                 <div id="any-qr-code" class="qr-preview"></div>
+                <div id="store-template-container" class="hidden">
+                    <div class="template-name-input">
+                        <label for="store-template-name">Template Name:</label>
+                        <input type="text" id="store-template-name" placeholder="Enter template name">
+                    </div>
+                    <button id="store-template-btn" class="store-btn">Store as Template</button>
+                </div>
             </div>
         </div>
         
@@ -403,9 +420,13 @@
         const cancelEditBtn = document.getElementById('cancel-edit');
         const importString = document.getElementById('import-string');
         const importTemplateName = document.getElementById('import-template-name');
+        const storeTemplateBtn = document.getElementById('store-template-btn');
+        const storeTemplateContainer = document.getElementById('store-template-container');
+        const storeTemplateName = document.getElementById('store-template-name');
 
         // Store templates in this array and sync with cookies
         let templates = [];
+        let currentQRString = null;
 
         // Initialize the application
         function init() {
@@ -433,6 +454,25 @@
                     colorLight: "#ffffff",
                     correctLevel: QRCode.CorrectLevel.H
                 });
+                
+                // Check if the QR code is a valid template
+                try {
+                    const template = parseTemplateString(qr);
+                    if (template) {
+                        storeTemplateContainer.classList.remove('hidden');
+                        currentQRString = qr;
+                        
+                        // Populate the template name field if we have a recipient name
+                        if (template.n) {
+                            storeTemplateName.value = template.n;
+                        }
+                    }
+                } catch (e) {
+                    // Hide the store template button if the QR code is not a valid template
+                    storeTemplateContainer.classList.add('hidden');
+                    console.error('Invalid template format:', e);
+                }
+                
                 showTab("qr-code");
             }
         }
@@ -554,6 +594,9 @@
             // Import template button
             importBtn.addEventListener('click', importTemplate);
             
+            // Store template button
+            storeTemplateBtn.addEventListener('click', storeTemplateFromQR);
+            
             // Template string input - populate template name when string is entered
             importString.addEventListener('input', () => {
                 // If the template name is empty and template string is entered, try to extract payer name
@@ -673,6 +716,37 @@
             } catch (e) {
                 alert('Error parsing template string. Please check the format.');
                 console.error('Error parsing template string:', e);
+            }
+        }
+
+        // Store template from QR code page
+        function storeTemplateFromQR() {
+            if (!currentQRString) {
+                alert('No valid QR code string found.');
+                return;
+            }
+            
+            try {
+                const template = parseTemplateString(currentQRString);
+                if (template) {
+                    // Use provided template name or default to recipient name
+                    const templateName = storeTemplateName.value.trim() || template.n || 'Unnamed Template';
+                    template.template_name = templateName;
+                    
+                    templates.push(template);
+                    saveTemplates();
+                    renderTemplates();
+                    
+                    // Show success message
+                    alert('Template saved successfully!');
+                    
+                    // Clear form and redirect to templates tab
+                    storeTemplateName.value = '';
+                    showTab('templates');
+                }
+            } catch (e) {
+                alert('Error parsing QR code as template. Please check the format.');
+                console.error('Error storing template from QR code:', e);
             }
         }
 
