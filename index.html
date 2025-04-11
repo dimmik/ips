@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IPS QR Code Generator</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80' font-family='sans-serif'>🔄</text></svg>">
     <script src="qrcode.min.js"></script>
     <style>
         :root {
@@ -286,6 +287,7 @@
             <div class="tab" data-tab="import-template"><span class="tab-label">Import</span></div>
             <div class="tab" data-tab="edit-template-container"><span class="tab-label">Edit</span></div>
             <div class="tab" data-tab="qr-code"><span class="tab-label">QR Code</span></div>
+            <div class="tab" data-tab="raw-qr"><span class="tab-label">Raw QR</span></div>
         </div>
         
         <div id="templates" class="tab-content active">
@@ -373,6 +375,21 @@
             </div>
         </div>
         
+        <div id="raw-qr" class="tab-content">
+            <div class="card">
+                <h2>Edit Raw QR Code</h2>
+                <div class="form-group">
+                    <label for="raw-qr-text">QR Code Text:</label>
+                    <textarea id="raw-qr-text" rows="5" placeholder="Enter or paste your QR code text here"></textarea>
+                </div>
+                <div class="button-group">
+                    <button id="generate-raw-qr">Generate QR Code</button>
+                    <button id="import-raw-qr">Import as Template</button>
+                </div>
+                <div id="raw-qr-preview" class="qr-preview"></div>
+            </div>
+        </div>
+        
         <div id="edit-template-container" class="tab-content">
             <div class="card">
                 <h2>Edit Template</h2>
@@ -423,6 +440,10 @@
         const storeTemplateBtn = document.getElementById('store-template-btn');
         const storeTemplateContainer = document.getElementById('store-template-container');
         const storeTemplateName = document.getElementById('store-template-name');
+        const rawQrText = document.getElementById('raw-qr-text');
+        const generateRawQrBtn = document.getElementById('generate-raw-qr');
+        const importRawQrBtn = document.getElementById('import-raw-qr');
+        const rawQrPreview = document.getElementById('raw-qr-preview');
 
         // Store templates in this array and sync with cookies
         let templates = [];
@@ -454,6 +475,9 @@
                     colorLight: "#ffffff",
                     correctLevel: QRCode.CorrectLevel.H
                 });
+                
+                // Also populate the raw QR text
+                rawQrText.value = qr;
                 
                 // Check if the QR code is a valid template
                 try {
@@ -597,6 +621,16 @@
             // Store template button
             storeTemplateBtn.addEventListener('click', storeTemplateFromQR);
             
+            // Raw QR code generation
+            generateRawQrBtn.addEventListener('click', () => {
+                generateRawQRCode();
+            });
+            
+            // Import raw QR code as template
+            importRawQrBtn.addEventListener('click', () => {
+                importRawQRCode();
+            });
+            
             // Template string input - populate template name when string is entered
             importString.addEventListener('input', () => {
                 // If the template name is empty and template string is entered, try to extract payer name
@@ -719,6 +753,99 @@
             }
         }
 
+        // Generate QR code from raw text
+        function generateRawQRCode() {
+            const qrText = rawQrText.value.trim();
+            
+            if (!qrText) {
+                alert('Please enter QR code text.');
+                return;
+            }
+            
+            // Clear previous QR code
+            rawQrPreview.innerHTML = '';
+            
+            // Generate QR code
+            new QRCode(rawQrPreview, {
+                text: qrText,
+                width: 200,
+                height: 200,
+                colorDark: "#000000",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.H
+            });
+            
+            // Update the querystring in the URL
+            const url = new URL(window.location);
+            url.searchParams.set('qr', qrText);
+            window.history.pushState({}, '', url);
+            
+            // Also update the QR code in the QR code tab
+            currentQRString = qrText;
+            document.getElementById("any-qr-code-string").innerHTML = `<a href='?qr=${qrText}' class="qr-link" target='_blank'>${qrText}</a>`;
+            elem = document.getElementById("any-qr-code");
+            // Clear existing content
+            elem.innerHTML = '';
+            // Generate QR code
+            new QRCode(elem, {
+                text: qrText,
+                width: 200,
+                height: 200,
+                colorDark: "#000000",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.H
+            });
+            
+            // Check if the QR code is a valid template
+            try {
+                const template = parseTemplateString(qrText);
+                if (template) {
+                    storeTemplateContainer.classList.remove('hidden');
+                    
+                    // Populate the template name field if we have a recipient name
+                    if (template.n) {
+                        storeTemplateName.value = template.n;
+                    }
+                }
+            } catch (e) {
+                // Hide the store template button if the QR code is not a valid template
+                storeTemplateContainer.classList.add('hidden');
+                console.error('Invalid template format:', e);
+            }
+        }
+
+        // Import raw QR code as template
+        function importRawQRCode() {
+            const qrText = rawQrText.value.trim();
+            
+            if (!qrText) {
+                alert('Please enter QR code text.');
+                return;
+            }
+            
+            try {
+                const template = parseTemplateString(qrText);
+                if (template) {
+                    // Use recipient name as template name
+                    const templateName = template.n || 'Unnamed Template';
+                    template.template_name = templateName;
+                    
+                    templates.push(template);
+                    saveTemplates();
+                    renderTemplates();
+                    
+                    // Show success message
+                    alert('Template imported successfully!');
+                    
+                    // Go to templates tab
+                    showTab('templates');
+                }
+            } catch (e) {
+                alert('Error importing QR code as template. Please check the format.');
+                console.error('Error importing QR code as template:', e);
+            }
+        }
+
         // Store template from QR code page
         function storeTemplateFromQR() {
             if (!currentQRString) {
@@ -815,6 +942,9 @@
                 colorLight: "#ffffff",
                 correctLevel: QRCode.CorrectLevel.H
             });
+            
+            // Also update the raw QR text
+            rawQrText.value = qrString;
         }
 
         // Helper function to set a cookie
