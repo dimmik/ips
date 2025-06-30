@@ -364,6 +364,28 @@
                 <h2>QR Code</h2>
                 <div id="any-qr-code-string" class="qr-text">N/A</div>
                 <div id="any-qr-code" class="qr-preview"></div>
+                <form id="qr-edit-form">
+                    <div class="form-group">
+                        <label for="qr-edit-r">Account Number (R):</label>
+                        <input type="text" id="qr-edit-r" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="qr-edit-n">Recipient Name (N):</label>
+                        <input type="text" id="qr-edit-n" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="qr-edit-i">Amount (I):</label>
+                        <input type="number" id="qr-edit-i" step="0.01" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="qr-edit-sf">SF Field:</label>
+                        <input type="text" id="qr-edit-sf" value="289" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="qr-edit-s">Payment Purpose (S):</label>
+                        <input type="text" id="qr-edit-s" required>
+                    </div>
+                </form>
                 <div id="store-template-container" class="hidden">
                     <div class="template-name-input">
                         <label for="store-template-name">Template Name:</label>
@@ -442,40 +464,60 @@
             params = new URLSearchParams(search);
             qr = params.get('qr');
             if (qr) {
-                document.getElementById("any-qr-code-string").innerHTML = `<a href='?qr=${qr}' class="qr-link" target='_blank'>${qr}</a>`;
-                elem = document.getElementById("any-qr-code");
-                // Clear existing content
-                elem.innerHTML = '';
-                // Generate QR code
-                new QRCode(elem, {
-                    text: qr,
-                    width: 200,
-                    height: 200,
-                    colorDark: "#000000",
-                    colorLight: "#ffffff",
-                    correctLevel: QRCode.CorrectLevel.H
-                });
-                
-                // Check if the QR code is a valid template
                 try {
                     const template = parseTemplateString(qr);
                     if (template) {
+                        document.getElementById('qr-edit-r').value = template.r;
+                        document.getElementById('qr-edit-n').value = template.n;
+                        document.getElementById('qr-edit-i').value = template.i ? parseFloat(template.i.replace('RSD', '').replace(',', '.')) : '';
+                        document.getElementById('qr-edit-sf').value = template.sf;
+                        document.getElementById('qr-edit-s').value = template.s;
+
+                        updateDynamicQR();
+                        
                         storeTemplateContainer.classList.remove('hidden');
                         currentQRString = qr;
                         
-                        // Populate the template name field if we have a recipient name
                         if (template.n) {
                             storeTemplateName.value = template.n;
                         }
                     }
                 } catch (e) {
-                    // Hide the store template button if the QR code is not a valid template
                     storeTemplateContainer.classList.add('hidden');
                     console.error('Invalid template format:', e);
                 }
                 
                 showTab("qr-code");
             }
+        }
+
+        function updateDynamicQR() {
+            const r = document.getElementById('qr-edit-r').value;
+            const n = document.getElementById('qr-edit-n').value;
+            const i = document.getElementById('qr-edit-i').value;
+            const sf = document.getElementById('qr-edit-sf').value;
+            const s = document.getElementById('qr-edit-s').value;
+
+            if (!r || !n || !i) {
+                return;
+            }
+
+            const formattedAmount = `RSD${parseFloat(i).toFixed(2).replace('.', ',')}`;
+            const qrString = `K:PR|V:01|C:1|R:${r}|N:${n}|I:${formattedAmount}|SF:${sf}|S:${s}`;
+
+            document.getElementById("any-qr-code-string").innerHTML = `<a href='?qr=${encodeURIComponent(qrString)}' class="qr-link" target='_blank'>${qrString}</a>`;
+            
+            const elem = document.getElementById("any-qr-code");
+            elem.innerHTML = '';
+            new QRCode(elem, {
+                text: qrString,
+                width: 200,
+                height: 200,
+                colorDark: "#000000",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.H
+            });
+            currentQRString = qrString;
         }
 
         // Load templates from cookies
@@ -630,6 +672,9 @@
                     }
                 }
             });
+
+            // QR edit form listeners
+            document.getElementById('qr-edit-form').addEventListener('input', updateDynamicQR);
         }
 
         // Add a new template
@@ -757,18 +802,23 @@
             const template = {
                 r: '',
                 n: '',
+                i: '',
                 sf: '289',
                 s: ''
             };
             
             parts.forEach(part => {
-                const [key, value] = part.split(':');
+                const [key, ...valueParts] = part.split(':');
+                const value = valueParts.join(':');
                 switch(key) {
                     case 'R':
                         template.r = value;
                         break;
                     case 'N':
                         template.n = value;
+                        break;
+                    case 'I':
+                        template.i = value;
                         break;
                     case 'SF':
                         template.sf = value;
@@ -789,33 +839,15 @@
 
         // Display QR code for a template with specified amount
         function displayQRCode(index, amount) {
-            const qrContainer = document.getElementById(`qr-container-${index}`);
-            const qrCodeElement = document.getElementById(`qr-code-${index}`);
-            
-            // Show the QR container row
-            qrContainer.classList.remove('hidden');
-            
-            // Clear previous QR code
-            qrCodeElement.innerHTML = '';
-            
-            // Generate QR code string
-            const qrString = generateQRCode(index, amount);
-            
-            // Display the formatted string
-            const qrTextElement = document.createElement('div');
-            qrTextElement.className = 'qr-text';
-            qrTextElement.innerHTML = `<a href='?qr=${encodeURIComponent(qrString)}' class="qr-link" target='_blank'>${qrString}</a>`;
-            qrCodeElement.appendChild(qrTextElement);
-            
-            // Generate QR code
-            new QRCode(qrCodeElement, {
-                text: qrString,
-                width: 200,
-                height: 200,
-                colorDark: "#000000",
-                colorLight: "#ffffff",
-                correctLevel: QRCode.CorrectLevel.H
-            });
+            const template = templates[index];
+            document.getElementById('qr-edit-r').value = template.r;
+            document.getElementById('qr-edit-n').value = template.n;
+            document.getElementById('qr-edit-i').value = amount;
+            document.getElementById('qr-edit-sf').value = template.sf;
+            document.getElementById('qr-edit-s').value = template.s;
+
+            updateDynamicQR();
+            showTab('qr-code');
         }
 
         // Helper function to set a cookie
