@@ -244,6 +244,17 @@
             margin-top: 10px;
             margin-bottom: 5px;
         }
+
+        .validation-message {
+            color: #f44336;
+            font-size: 0.9rem;
+            margin-top: 10px;
+            margin-bottom: 10px;
+        }
+
+        .invalid-field {
+            border: 1px solid #f44336 !important;
+        }
         
         @media (max-width: 480px) {
             .tab {
@@ -364,6 +375,7 @@
                 <h2>QR Code</h2>
                 <div id="any-qr-code-string" class="qr-text">N/A</div>
                 <div id="any-qr-code" class="qr-preview"></div>
+                <div id="validation-message-container" class="validation-message"></div>
                 <form id="qr-edit-form">
                     <div class="form-group">
                         <label for="qr-edit-r">Account Number (R):</label>
@@ -492,17 +504,50 @@
         }
 
         function updateDynamicQR() {
-            const r = document.getElementById('qr-edit-r').value;
-            const n = document.getElementById('qr-edit-n').value;
-            const i = document.getElementById('qr-edit-i').value;
-            const sf = document.getElementById('qr-edit-sf').value;
-            const s = document.getElementById('qr-edit-s').value;
+            const r_field = document.getElementById('qr-edit-r');
+            const n_field = document.getElementById('qr-edit-n');
+            const i_field = document.getElementById('qr-edit-i');
+            const sf_field = document.getElementById('qr-edit-sf');
+            const s_field = document.getElementById('qr-edit-s');
 
-            if (!r || !n || !i) {
+            const r = r_field.value;
+            const n = n_field.value;
+            const i = i_field.value;
+            const sf = sf_field.value;
+            const s = s_field.value;
+
+            let isValid = true;
+            let validationMessage = '';
+
+            // Reset all fields to valid
+            [r_field, n_field, i_field, sf_field, s_field].forEach(field => field.classList.remove('invalid-field'));
+
+            // Validation for R field
+            if (r.length !== 18 || !/^\d+$/.test(r)) {
+                isValid = false;
+                validationMessage += 'Account Number (R) must be exactly 18 digits. ';
+                r_field.classList.add('invalid-field');
+            }
+
+            // Validation for all fields length
+            if (r.length > 70) { isValid = false; validationMessage += 'Account Number (R) should not exceed 70 characters. '; r_field.classList.add('invalid-field'); }
+            if (n.length > 70) { isValid = false; validationMessage += 'Recipient Name (N) should not exceed 70 characters. '; n_field.classList.add('invalid-field'); }
+            if (i.length > 70) { isValid = false; validationMessage += 'Amount (I) should not exceed 70 characters. '; i_field.classList.add('invalid-field'); }
+            if (sf.length > 70) { isValid = false; validationMessage += 'SF Field should not exceed 70 characters. '; sf_field.classList.add('invalid-field'); }
+            if (s.length > 70) { isValid = false; validationMessage += 'Payment Purpose (S) should not exceed 70 characters. '; s_field.classList.add('invalid-field'); }
+
+            const validationContainer = document.getElementById('validation-message-container');
+            if (!isValid) {
+                validationContainer.textContent = `Validation failed: ${validationMessage}`;
+            } else {
+                validationContainer.textContent = '';
+            }
+
+            if (!r && !n && !i) {
                 return;
             }
 
-            const formattedAmount = `RSD${parseFloat(i).toFixed(2).replace('.', ',')}`;
+            const formattedAmount = i ? `RSD${parseFloat(i).toFixed(2).replace('.', ',')}` : '';
             const qrString = `K:PR|V:01|C:1|R:${r}|N:${n}|I:${formattedAmount}|SF:${sf}|S:${s}`;
 
             document.getElementById("any-qr-code-string").innerHTML = `Link: <a href='?qr=${encodeURIComponent(qrString)}' class="qr-link" target='_blank'>${qrString}</a>`;
