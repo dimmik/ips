@@ -162,6 +162,12 @@
             font-size: 0.9rem;
         }
 
+        .header-controls {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 15px;
+        }
+
         .tabs {
             display: flex;
             border-bottom: 1px solid var(--border-color);
@@ -245,6 +251,42 @@
             margin-bottom: 5px;
         }
 
+        .dropdown {
+            position: relative;
+            display: inline-block;
+        }
+
+        .dropbtn {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 10px;
+            font-size: 16px;
+            border: none;
+            cursor: pointer;
+        }
+
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            background-color: #f9f9f9;
+            min-width: 160px;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+            z-index: 1;
+        }
+
+        .dropdown-content a {
+            color: black;
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
+        }
+
+        .dropdown-content a:hover {background-color: #f1f1f1}
+
+        .show {display:block;}
+
+        
+
         .validation-message {
             color: #f44336;
             font-size: 0.9rem;
@@ -292,15 +334,20 @@
     <div class="container">
         <h1>IPS QR Code Generator</h1>
         
-        <div class="tabs">
-            <div class="tab active" data-tab="templates"><span class="tab-label">Templates</span></div>
-            <div class="tab" data-tab="add-template"><span class="tab-label">Add New</span></div>
-            <div class="tab" data-tab="import-template"><span class="tab-label">Import</span></div>
-            <div class="tab" data-tab="edit-template-container"><span class="tab-label">Edit</span></div>
-            <div class="tab" data-tab="qr-code"><span class="tab-label">QR Code</span></div>
+        <div class="header-controls">
+            <div class="tab active" data-tab="qr-code"><span class="tab-label">QR Code</span></div>
+            <div class="dropdown">
+                <button class="dropbtn">+</button>
+                <div class="dropdown-content">
+                    <a href="#" data-tab="templates">Templates</a>
+                    <a href="#" data-tab="add-template">Add New</a>
+                    <a href="#" data-tab="import-template">Import</a>
+                    <a href="#" data-tab="edit-template-container">Edit</a>
+                </div>
+            </div>
         </div>
         
-        <div id="templates" class="tab-content active">
+        <div id="templates" class="tab-content">
             <div class="card">
                 <h2>Your Templates</h2>
                 <div class="table-responsive">
@@ -650,15 +697,30 @@
 
         // Set up event listeners
         function setupEventListeners() {
+            // Dropdown click
+            document.querySelector('.dropbtn').addEventListener('click', () => {
+                document.querySelector('.dropdown-content').classList.toggle('show');
+            });
+
+            // Close the dropdown if the user clicks outside of it
+            window.onclick = function(event) {
+                if (!event.target.matches('.dropbtn')) {
+                    const dropdowns = document.getElementsByClassName("dropdown-content");
+                    for (let i = 0; i < dropdowns.length; i++) {
+                        const openDropdown = dropdowns[i];
+                        if (openDropdown.classList.contains('show')) {
+                            openDropdown.classList.remove('show');
+                        }
+                    }
+                }
+            }
+
             // Tab switching
-            tabLinks.forEach(tab => {
-                tab.addEventListener('click', () => {
-                    tabLinks.forEach(t => t.classList.remove('active'));
-                    tabContents.forEach(t => t.classList.remove('active'));
-                    
-                    tab.classList.add('active');
+            document.querySelectorAll('.tab, .dropdown-content a').forEach(tab => {
+                tab.addEventListener('click', (e) => {
+                    e.preventDefault();
                     const tabId = tab.getAttribute('data-tab');
-                    document.getElementById(tabId).classList.add('active');
+                    showTab(tabId);
                 });
             });
             
@@ -922,15 +984,24 @@
 
         // Show a specific tab
         function showTab(tabId) {
-            tabLinks.forEach(tab => tab.classList.remove('active'));
             tabContents.forEach(content => content.classList.remove('active'));
-            
-            document.querySelector(`.tab[data-tab="${tabId}"]`).classList.add('active');
             document.getElementById(tabId).classList.add('active');
+
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            const activeTab = document.querySelector(`.tab[data-tab="${tabId}"]`);
+            if (activeTab) {
+                activeTab.classList.add('active');
+            } else {
+                // if the tab is in the dropdown, we still want the main QR code tab to not be active
+                document.querySelector('.tab[data-tab="qr-code"]').classList.remove('active');
+            }
         }
 
         // Initialize the app
-        window.addEventListener('DOMContentLoaded', init);
+        window.addEventListener('DOMContentLoaded', () => {
+            init();
+            showTab('qr-code');
+        });
     </script>
 </body>
 </html>
