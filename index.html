@@ -560,13 +560,26 @@
             }
         }
 
+        function getNormalizedAccountNumber(value) {
+            if (value.includes('-')) {
+                const parts = value.split('-');
+                if (parts.length === 3) {
+                    const middle = parts[1].padStart(13, '0');
+                    return (parts[0] + middle + parts[2]).replace(/-/g, '');
+                }
+            }
+            return value.replace(/-/g, '');
+        }
+
         function displayDashedAccountNumber(inputElement, outputElement) {
-            const value = inputElement.value.replace(/-/g, '');
-            if (value.length > 0) {
+            const value = inputElement.value;
+            const normalized_r = getNormalizedAccountNumber(value);
+
+            if (normalized_r.length > 0) {
                 const parts = [];
-                if (value.length > 0) parts.push(value.substring(0, 3));
-                if (value.length > 3) parts.push(value.substring(3, 16));
-                if (value.length > 16) parts.push(value.substring(16));
+                if (normalized_r.length > 0) parts.push(normalized_r.substring(0, 3));
+                if (normalized_r.length > 3) parts.push(normalized_r.substring(3, 16));
+                if (normalized_r.length > 16) parts.push(normalized_r.substring(16));
                 outputElement.textContent = parts.join('-');
             } else {
                 outputElement.textContent = '';
@@ -580,8 +593,7 @@
             const sf_field = document.getElementById('qr-edit-sf');
             const s_field = document.getElementById('qr-edit-s');
 
-            const r_with_dashes = r_field.value;
-            const r = r_with_dashes.replace(/-/g, '');
+            const r = getNormalizedAccountNumber(r_field.value);
             const n = n_field.value;
             const i = i_field.value;
             const sf = sf_field.value;
