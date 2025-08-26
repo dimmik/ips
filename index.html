@@ -236,6 +236,16 @@
             white-space: nowrap;
         }
         
+        .copy-btn {
+            background-color: #e0e0e0;
+            color: #000000;
+            padding: 1px 10px;
+            font-size: 0.75rem;
+            margin-left: 10px;
+            border-radius: 9999px;
+            border: 1px solid #cccccc;
+        }
+        
         .template-info {
             font-size: 0.8rem;
             color: #666;
@@ -636,7 +646,19 @@
             const formattedAmount = i ? `RSD${parseFloat(i).toFixed(2).replace('.', ',')}` : '';
             const qrString = `K:PR|V:01|C:1|R:${r}|N:${n}|I:${formattedAmount}|SF:${sf}|S:${s}`;
 
-            document.getElementById("any-qr-code-string").innerHTML = `Link: <a href='?qr=${encodeURIComponent(qrString)}' class="qr-link" target='_blank'>${qrString}</a>`;
+            document.getElementById("any-qr-code-string").innerHTML = `Link: <a href='?qr=${encodeURIComponent(qrString)}' class="qr-link" target='_blank'>${qrString}</a> <button id="copy-qr-link" class="copy-btn">Copy Link</button>`;
+            
+            const copyBtn = document.getElementById('copy-qr-link');
+            if(copyBtn) {
+                copyBtn.addEventListener('click', () => {
+                    const link = `${window.location.origin}${window.location.pathname}?qr=${encodeURIComponent(qrString)}`;
+                    navigator.clipboard.writeText(link).then(() => {
+                        alert('Link copied to clipboard!');
+                    }, (err) => {
+                        console.error('Could not copy text: ', err);
+                    });
+                });
+            }
             
             const elem = document.getElementById("any-qr-code");
             elem.innerHTML = '';
