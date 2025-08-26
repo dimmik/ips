@@ -388,6 +388,7 @@
                     <div class="form-group">
                         <label for="r-field">Account Number (R):</label>
                         <input type="text" id="r-field" required>
+                        <div id="dashed-r-field" style="font-size: 0.9rem; color: #666; margin-top: 4px;"></div>
                     </div>
                     <div class="form-group">
                         <label for="n-field">Recipient Name (N):</label>
@@ -434,6 +435,7 @@
                     <div class="form-group">
                         <label for="qr-edit-r">Account Number (R):</label>
                         <input type="text" id="qr-edit-r" required>
+                        <div id="dashed-account-number" style="font-size: 0.9rem; color: #666; margin-top: 4px;"></div>
                     </div>
                     <div class="form-group">
                         <label for="qr-edit-n">Recipient Name (N):</label>
@@ -474,6 +476,7 @@
                     <div class="form-group">
                         <label for="edit-r-field">Account Number (R):</label>
                         <input type="text" id="edit-r-field" required>
+                        <div id="dashed-edit-r-field" style="font-size: 0.9rem; color: #666; margin-top: 4px;"></div>
                     </div>
                     <div class="form-group">
                         <label for="edit-n-field">Recipient Name (N):</label>
@@ -557,6 +560,19 @@
             }
         }
 
+        function displayDashedAccountNumber(inputElement, outputElement) {
+            const value = inputElement.value.replace(/-/g, '');
+            if (value.length > 0) {
+                const parts = [];
+                if (value.length > 0) parts.push(value.substring(0, 3));
+                if (value.length > 3) parts.push(value.substring(3, 16));
+                if (value.length > 16) parts.push(value.substring(16));
+                outputElement.textContent = parts.join('-');
+            } else {
+                outputElement.textContent = '';
+            }
+        }
+
         function updateDynamicQR() {
             const r_field = document.getElementById('qr-edit-r');
             const n_field = document.getElementById('qr-edit-n');
@@ -564,11 +580,15 @@
             const sf_field = document.getElementById('qr-edit-sf');
             const s_field = document.getElementById('qr-edit-s');
 
-            const r = r_field.value;
+            const r_with_dashes = r_field.value;
+            const r = r_with_dashes.replace(/-/g, '');
             const n = n_field.value;
             const i = i_field.value;
             const sf = sf_field.value;
             const s = s_field.value;
+
+            // Format and display the dashed account number
+            displayDashedAccountNumber(r_field, document.getElementById('dashed-account-number'));
 
             let isValid = true;
             let validationMessage = '';
@@ -789,6 +809,14 @@
 
             // QR edit form listeners
             document.getElementById('qr-edit-form').addEventListener('input', updateDynamicQR);
+
+            // Dashed account number listeners
+            document.getElementById('r-field').addEventListener('input', () => {
+                displayDashedAccountNumber(document.getElementById('r-field'), document.getElementById('dashed-r-field'));
+            });
+            document.getElementById('edit-r-field').addEventListener('input', () => {
+                displayDashedAccountNumber(document.getElementById('edit-r-field'), document.getElementById('dashed-edit-r-field'));
+            });
         }
 
         // Add a new template
@@ -814,11 +842,15 @@
             const template = templates[index];
             document.getElementById('edit-index').value = index;
             document.getElementById('edit-template-name').value = template.template_name || template.n;
-            document.getElementById('edit-r-field').value = template.r;
+            const edit_r_field = document.getElementById('edit-r-field');
+            edit_r_field.value = template.r;
             document.getElementById('edit-n-field').value = template.n;
             document.getElementById('edit-sf-field').value = template.sf;
             document.getElementById('edit-s-field').value = template.s;
             
+            // Manually trigger the display of the dashed account number
+            displayDashedAccountNumber(edit_r_field, document.getElementById('dashed-edit-r-field'));
+
             showTab('edit-template-container');
         }
 
