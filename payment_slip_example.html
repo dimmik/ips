@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Налог за уплату</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        
+        .payment-slip {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border: 2px solid black;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            min-height: 400px;
+        }
+        
+        .left-section {
+            border-right: 2px solid black;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .right-section {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .field-label {
+            font-size: 11px;
+            margin-bottom: 3px;
+            color: #333;
+        }
+        
+        .field-box {
+            border: 1px solid black;
+            padding: 8px;
+            margin-bottom: 15px;
+            min-height: 50px;
+        }
+        
+        .field-box-large {
+            border: 1px solid black;
+            padding: 8px;
+            margin-bottom: 15px;
+            min-height: 90px;
+        }
+        
+        .title {
+            text-align: right;
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+        
+        .top-row {
+            display: grid;
+            grid-template-columns: auto auto 1fr;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .code-box {
+            border: 1px solid black;
+            padding: 8px;
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+            min-width: 60px;
+        }
+        
+        .currency-box {
+            border: 1px solid black;
+            padding: 8px;
+            text-align: center;
+            font-size: 14px;
+            min-width: 60px;
+        }
+        
+        .amount-box {
+            border: 1px solid black;
+            padding: 8px;
+            text-align: right;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        .account-box {
+            border: 1px solid black;
+            padding: 8px;
+            margin-bottom: 20px;
+            font-size: 16px;
+            text-align: center;
+        }
+        
+        .reference-row {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .model-box {
+            border: 1px solid black;
+            padding: 8px;
+            text-align: center;
+            font-size: 16px;
+            min-width: 60px;
+        }
+        
+        .reference-box {
+            border: 1px solid black;
+            padding: 8px;
+            font-size: 14px;
+        }
+        
+        .qr-section {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            margin-top: auto;
+        }
+        
+        .qr-container {
+            text-align: center;
+        }
+        
+        .qr-label {
+            font-size: 10px;
+            margin-bottom: 5px;
+        }
+        
+        .qr-placeholder {
+            width: 150px;
+            height: 150px;
+            border: 2px solid black;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        
+        .date-section {
+            margin-top: 20px;
+        }
+        
+        .date-label {
+            font-size: 11px;
+            margin-bottom: 3px;
+        }
+        
+        .date-value {
+            font-size: 16px;
+        }
+        
+        .signature-section {
+            margin-top: auto;
+            padding-top: 40px;
+        }
+        
+        .signature-label {
+            font-size: 11px;
+            border-top: 1px solid black;
+            padding-top: 5px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="payment-slip">
+        <div class="left-section">
+            <div>
+                <div class="field-label">уплатилац</div>
+                <div class="field-box">
+                    Dmitry Andrievskiy<br>
+                    Beograd, Slobodanke Danke Savic 23
+                </div>
+            </div>
+            
+            <div>
+                <div class="field-label">сврха уплате</div>
+                <div class="field-box">
+                    Одобрење сталног настањења
+                </div>
+            </div>
+            
+            <div>
+                <div class="field-label">прималац</div>
+                <div class="field-box-large">
+                    Министарство унутрашњих послова Републике Србије<br>
+                    Булевар Михајла Пупина број 2
+                </div>
+            </div>
+            
+            <div class="signature-section">
+                <div class="signature-label">печат и потпис уплатиоца</div>
+                <div style="height: 60px;"></div>
+                <div class="signature-label">место и датум пријема</div>
+            </div>
+        </div>
+        
+        <div class="right-section">
+            <div class="title">НАЛОГ ЗА УПЛАТУ</div>
+            
+            <div class="top-row">
+                <div>
+                    <div class="field-label">шифра плаћања</div>
+                    <div class="code-box">253</div>
+                </div>
+                <div>
+                    <div class="field-label">валута</div>
+                    <div class="currency-box">РСД</div>
+                </div>
+                <div>
+                    <div class="field-label">износ</div>
+                    <div class="amount-box">16970.00</div>
+                </div>
+            </div>
+            
+            <div>
+                <div class="field-label">рачун примаоца</div>
+                <div class="account-box">840-1848-16</div>
+            </div>
+            
+            <div class="reference-row">
+                <div>
+                    <div class="field-label">број модела</div>
+                    <div class="model-box">97</div>
+                </div>
+                <div>
+                    <div class="field-label">позив на број (одобрење)</div>
+                    <div class="reference-box">890184200397966012906000</div>
+                </div>
+            </div>
+            
+            <div class="qr-section">
+                <div>
+                    <div class="date-section">
+                        <div class="date-label">датум валуте</div>
+                        <div class="date-value">10.11.2025</div>
+                    </div>
+                </div>
+                <div style="margin-left: auto;">
+                    <div class="qr-container">
+                        <div class="qr-label">NBS IPS QR</div>
+                        <div class="qr-placeholder">QR</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

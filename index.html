@@ -440,12 +440,19 @@
                 <h2>QR Code</h2>
                 <div id="any-qr-code-string" class="qr-text">N/A</div>
                 <div id="any-qr-code" class="qr-preview"></div>
+                <div class="button-group" style="justify-content: center; margin-top: 15px;">
+                    <button id="printable-slip-btn">Printable Slip</button>
+                </div>
                 <div id="validation-message-container" class="validation-message"></div>
                 <form id="qr-edit-form">
                     <div class="form-group">
                         <label for="qr-edit-r">Account Number (R):</label>
                         <input type="text" id="qr-edit-r" required>
                         <div id="dashed-account-number" style="font-size: 0.9rem; color: #666; margin-top: 4px;"></div>
+                    </div>
+                    <div class="form-group">
+                        <label for="qr-edit-p">Payer Name (P) (Optional):</label>
+                        <input type="text" id="qr-edit-p">
                     </div>
                     <div class="form-group">
                         <label for="qr-edit-n">Recipient Name (N):</label>
@@ -547,6 +554,7 @@
                     const template = parseTemplateString(qr);
                     if (template) {
                         document.getElementById('qr-edit-r').value = template.r;
+                        document.getElementById('qr-edit-p').value = template.p;
                         document.getElementById('qr-edit-n').value = template.n;
                         document.getElementById('qr-edit-i').value = template.i ? parseFloat(template.i.replace('RSD', '').replace(',', '.')) : '';
                         document.getElementById('qr-edit-sf').value = template.sf;
@@ -598,12 +606,14 @@
 
         function updateDynamicQR() {
             const r_field = document.getElementById('qr-edit-r');
+            const p_field = document.getElementById('qr-edit-p');
             const n_field = document.getElementById('qr-edit-n');
             const i_field = document.getElementById('qr-edit-i');
             const sf_field = document.getElementById('qr-edit-sf');
             const s_field = document.getElementById('qr-edit-s');
 
             const r = getNormalizedAccountNumber(r_field.value);
+            const p = p_field.value;
             const n = n_field.value;
             const i = i_field.value;
             const sf = sf_field.value;
@@ -644,7 +654,11 @@
             }
 
             const formattedAmount = i ? `RSD${parseFloat(i).toFixed(2).replace('.', ',')}` : '';
-            const qrString = `K:PR|V:01|C:1|R:${r}|N:${n}|I:${formattedAmount}|SF:${sf}|S:${s}`;
+            
+            let qrString = `K:PR|V:01|C:1|R:${r}|N:${n}|I:${formattedAmount}|SF:${sf}|S:${s}`;
+            if (p) {
+                qrString += `|P:${p}`;
+            }
 
             document.getElementById("any-qr-code-string").innerHTML = `Link: <a href='?qr=${encodeURIComponent(qrString)}' class="qr-link" target='_blank'>${qrString}</a> <button id="copy-qr-link" class="copy-btn">Copy Link</button>`;
             
@@ -851,6 +865,17 @@
             document.getElementById('edit-r-field').addEventListener('input', () => {
                 displayDashedAccountNumber(document.getElementById('edit-r-field'), document.getElementById('dashed-edit-r-field'));
             });
+
+            document.getElementById('printable-slip-btn').addEventListener('click', openPrintableSlip);
+        }
+
+        function openPrintableSlip() {
+            if (currentQRString) {
+                const url = `payment_slip.html?qr=${encodeURIComponent(currentQRString)}`;
+                window.open(url, '_blank');
+            } else {
+                alert('Please generate a QR code first.');
+            }
         }
 
         // Add a new template
@@ -981,6 +1006,7 @@
             const parts = str.split('|');
             const template = {
                 r: '',
+                p: '',
                 n: '',
                 i: '',
                 sf: '289',
@@ -993,6 +1019,9 @@
                 switch(key) {
                     case 'R':
                         template.r = value;
+                        break;
+                    case 'P':
+                        template.p = value;
                         break;
                     case 'N':
                         template.n = value;
