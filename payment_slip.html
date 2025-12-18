@@ -257,7 +257,7 @@
                 <div style="margin-left: auto;">
                     <div class="qr-container">
                         <div class="qr-label">NBS IPS QR</div>
-                        <div class="qr-placeholder" id="qr-code-placeholder"></div>
+                        <canvas class="qr-placeholder" id="qr-code-placeholder"></canvas>
                     </div>
                 </div>
             </div>
@@ -331,14 +331,14 @@
 
             // QR Code
             const qrPlaceholder = document.getElementById('qr-code-placeholder');
-            qrPlaceholder.innerHTML = ''; // Clear placeholder text/image
-            new QRCode(qrPlaceholder, {
-                text: qrString,
+            const context = qrPlaceholder.getContext('2d');
+            context.clearRect(0, 0, qrPlaceholder.width, qrPlaceholder.height);
+
+            QRCode.toCanvas(qrPlaceholder, qrString, {
                 width: 150,
-                height: 150,
-                colorDark: "#000000",
-                colorLight: "#ffffff",
-                correctLevel: QRCode.CorrectLevel.H
+                errorCorrectionLevel: 'H'
+            }, function (error) {
+                if (error) console.error(error);
             });
         }
     </script>

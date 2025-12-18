@@ -439,7 +439,7 @@
             <div class="card">
                 <h2>QR Code</h2>
                 <div id="any-qr-code-string" class="qr-text">N/A</div>
-                <div id="any-qr-code" class="qr-preview"></div>
+                <canvas id="any-qr-code" class="qr-preview"></canvas>
                 <div class="button-group" style="justify-content: center; margin-top: 15px;">
                     <button id="printable-slip-btn">Printable Slip</button>
                 </div>
@@ -572,6 +572,28 @@
                 } catch (e) {
                     storeTemplateContainer.classList.add('hidden');
                     console.error('Invalid template format:', e);
+
+                    // Show QR for raw string
+                    document.getElementById("any-qr-code-string").textContent = qr;
+                    const canvas = document.getElementById("any-qr-code");
+                    const context = canvas.getContext('2d');
+                    context.clearRect(0, 0, canvas.width, canvas.height);
+                    QRCode.toCanvas(canvas, qr, {
+                        width: 200,
+                        errorCorrectionLevel: 'H'
+                    }, function (error) {
+                        if (error) console.error(error);
+                    });
+                    currentQRString = qr;
+
+                    // Show error message
+                    const validationContainer = document.getElementById('validation-message-container');
+                    validationContainer.textContent = "Invalid IPS code format in URL. You can create a new one manually below.";
+
+                    // Ensure form is visible and empty
+                    const form = document.getElementById('qr-edit-form');
+                    form.reset();
+                    document.getElementById('dashed-account-number').textContent = '';
                 }
                 
                 showTab("qr-code");
@@ -674,15 +696,16 @@
                 });
             }
             
-            const elem = document.getElementById("any-qr-code");
-            elem.innerHTML = '';
-            new QRCode(elem, {
-                text: qrString,
+            const canvas = document.getElementById("any-qr-code");
+            // Clear the canvas before drawing a new QR code
+            const context = canvas.getContext('2d');
+            context.clearRect(0, 0, canvas.width, canvas.height);
+
+            QRCode.toCanvas(canvas, qrString, {
                 width: 200,
-                height: 200,
-                colorDark: "#000000",
-                colorLight: "#ffffff",
-                correctLevel: QRCode.CorrectLevel.H
+                errorCorrectionLevel: 'H'
+            }, function (error) {
+                if (error) console.error(error);
             });
             currentQRString = qrString;
         }
