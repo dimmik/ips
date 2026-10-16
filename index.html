@@ -405,6 +405,10 @@
                         <input type="text" id="n-field" required>
                     </div>
                     <div class="form-group">
+                        <label for="amount-field">Amount (I) (Optional):</label>
+                        <input type="number" id="amount-field" step="0.01" min="0">
+                    </div>
+                    <div class="form-group">
                         <label for="sf-field">SF Field (type of payment):</label>
                         <input type="text" id="sf-field" value="289" required>
                     </div>
@@ -428,8 +432,14 @@
                     <input type="text" id="import-template-name" placeholder="Enter template name">
                 </div>
                 <div class="form-group">
-                    <label for="import-string">Template String:</label>
-                    <textarea id="import-string" rows="3" placeholder="K:PR|V:01|C:1|R:265000000999999999|N:Some One|I:RSD200,00|SF:289|S:Placanje racuna"></textarea>
+                    <label for="import-string">Template String or Link:</label>
+                    <textarea id="import-string" rows="3" placeholder="K:PR|V:01|C:1|R:265000000999999999|N:Some One|I:RSD200,00|SF:289|S:Placanje racuna&#10;or https://.../?qr=K%3APR%7CV%3A01..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="import-image">Or QR Code Image:</label>
+                    <input type="file" id="import-image" accept="image/*">
+                    <div class="template-info">You can also paste an image into the field above.</div>
+                    <div id="import-image-status" class="template-info"></div>
                 </div>
                 <button id="import-btn">Import Template</button>
             </div>
@@ -500,6 +510,10 @@
                         <input type="text" id="edit-n-field" required>
                     </div>
                     <div class="form-group">
+                        <label for="edit-amount-field">Amount (I) (Optional):</label>
+                        <input type="number" id="edit-amount-field" step="0.01" min="0">
+                    </div>
+                    <div class="form-group">
                         <label for="edit-sf-field">SF Field (type of payment):</label>
                         <input type="text" id="edit-sf-field" required>
                     </div>
@@ -556,7 +570,7 @@
                         document.getElementById('qr-edit-r').value = template.r;
                         document.getElementById('qr-edit-p').value = template.p;
                         document.getElementById('qr-edit-n').value = template.n;
-                        document.getElementById('qr-edit-i').value = template.i ? parseFloat(template.i.replace('RSD', '').replace(',', '.')) : '';
+                        document.getElementById('qr-edit-i').value = parseIPSAmount(template.i);
                         document.getElementById('qr-edit-sf').value = template.sf;
                         document.getElementById('qr-edit-s').value = template.s;
 
@@ -609,6 +623,46 @@
                 }
             }
             return value.replace(/-/g, '');
+        }
+
+        // Convert IPS amount ("RSD200,00") to a plain number string ("200")
+        function parseIPSAmount(i) {
+            if (!i) return '';
+            const value = parseFloat(i.replace(/^[A-Z]{3}/, '').replace(',', '.'));
+            return isNaN(value) ? '' : String(value);
+        }
+
+        // Accept either a raw IPS string or a link containing ?qr=... and return the IPS string
+        function extractQRString(input) {
+            const str = input.trim();
+            if (/^https?:\/\//i.test(str) || /[?&]qr=/.test(str)) {
+                try {
+                    const qr = new URL(str, window.location.href).searchParams.get('qr');
+                    if (qr) return qr.trim();
+                } catch (e) {
+                    // Not a valid URL, fall through
+                }
+            }
+            if (/%7C|%3A/i.test(str)) {
+                try {
+                    return decodeURIComponent(str);
+                } catch (e) {
+                    // Not percent-encoded, use as is
+                }
+            }
+            return str;
+        }
+
+        // Build a stored template from a parsed IPS string
+        function templateFromParsed(parsed, templateName) {
+            return {
+                template_name: templateName,
+                r: parsed.r,
+                n: parsed.n,
+                sf: parsed.sf,
+                s: parsed.s,
+                amount: parseIPSAmount(parsed.i)
+            };
         }
 
         function displayDashedAccountNumber(inputElement, outputElement) {
@@ -771,7 +825,7 @@
                         <div class="template-info">${template.n} - ${template.r}</div>
                     </td>
                     <td>
-                        <input type="number" class="amount-input" data-index="${index}" min="0.01" step="0.01" value="100">
+                        <input type="number" class="amount-input" data-index="${index}" min="0.01" step="0.01" value="${template.amount || 100}">
                     </td>
                     <td class="action-cell">
                         <div class="template-actions">
@@ -850,7 +904,7 @@
                 // If the template name is empty and template string is entered, try to extract payer name
                 if (!importTemplateName.value.trim()) {
                     try {
-                        const template = parseTemplateString(importString.value.trim());
+                        const template = parseTemplateString(extractQRString(importString.value));
                         if (template && template.n) {
                             importTemplateName.value = template.n;
                         }
@@ -860,6 +914,23 @@
                 }
             });
             
+            // QR code image: pick a file or paste an image into the import field
+            document.getElementById('import-image').addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) importFromImage(file);
+                e.target.value = '';
+            });
+            importString.addEventListener('paste', (e) => {
+                const items = (e.clipboardData && e.clipboardData.items) || [];
+                for (const item of items) {
+                    if (item.type.startsWith('image/')) {
+                        e.preventDefault();
+                        importFromImage(item.getAsFile());
+                        return;
+                    }
+                }
+            });
+
             // Template actions (edit, delete, generate QR)
             templatesList.addEventListener('click', (e) => {
                 if (e.target.classList.contains('edit-btn')) {
@@ -908,7 +979,8 @@
                 r: document.getElementById('r-field').value,
                 n: document.getElementById('n-field').value,
                 sf: document.getElementById('sf-field').value,
-                s: document.getElementById('s-field').value
+                s: document.getElementById('s-field').value,
+                amount: document.getElementById('amount-field').value
             };
             
             templates.push(template);
@@ -927,6 +999,7 @@
             const edit_r_field = document.getElementById('edit-r-field');
             edit_r_field.value = template.r;
             document.getElementById('edit-n-field').value = template.n;
+            document.getElementById('edit-amount-field').value = template.amount || '';
             document.getElementById('edit-sf-field').value = template.sf;
             document.getElementById('edit-s-field').value = template.s;
             
@@ -944,7 +1017,8 @@
                 r: document.getElementById('edit-r-field').value,
                 n: document.getElementById('edit-n-field').value,
                 sf: document.getElementById('edit-sf-field').value,
-                s: document.getElementById('edit-s-field').value
+                s: document.getElementById('edit-s-field').value,
+                amount: document.getElementById('edit-amount-field').value
             };
             
             saveTemplates();
@@ -963,11 +1037,11 @@
 
         // Import template from string
         function importTemplate() {
-            const importString = document.getElementById('import-string').value.trim();
+            const importString = extractQRString(document.getElementById('import-string').value);
             let templateName = document.getElementById('import-template-name').value.trim();
             
             if (!importString) {
-                alert('Please enter a template string.');
+                alert('Please enter a template string or link.');
                 return;
             }
             
@@ -979,8 +1053,7 @@
                         templateName = template.n;
                     }
                     
-                    template.template_name = templateName || 'Unnamed Template';
-                    templates.push(template);
+                    templates.push(templateFromParsed(template, templateName || 'Unnamed Template'));
                     saveTemplates();
                     renderTemplates();
                     document.getElementById('import-string').value = '';
@@ -988,8 +1061,68 @@
                     showTab('templates');
                 }
             } catch (e) {
-                alert('Error parsing template string. Please check the format.');
+                alert('Error parsing template string or link. Please check the format.');
                 console.error('Error parsing template string:', e);
+            }
+        }
+
+        // Load the QR decoder only when it is needed
+        function loadQRDecoder() {
+            if (window.jsQR) return Promise.resolve(window.jsQR);
+            return new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = 'jsQR.min.js';
+                script.onload = () => resolve(window.jsQR);
+                script.onerror = () => reject(new Error('Failed to load QR decoder'));
+                document.head.appendChild(script);
+            });
+        }
+
+        function loadImage(file) {
+            return new Promise((resolve, reject) => {
+                const url = URL.createObjectURL(file);
+                const img = new Image();
+                img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
+                img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Failed to load image')); };
+                img.src = url;
+            });
+        }
+
+        // Decode a QR code from an image file, trying a few scales (large photos decode poorly and slowly)
+        async function decodeQRImage(file) {
+            const [jsQR, img] = await Promise.all([loadQRDecoder(), loadImage(file)]);
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d', { willReadFrequently: true });
+            const maxSide = Math.max(img.naturalWidth, img.naturalHeight);
+            for (const target of [1000, 1600, 600, maxSide]) {
+                const scale = Math.min(1, target / maxSide);
+                canvas.width = Math.max(1, Math.round(img.naturalWidth * scale));
+                canvas.height = Math.max(1, Math.round(img.naturalHeight * scale));
+                context.fillStyle = '#ffffff';
+                context.fillRect(0, 0, canvas.width, canvas.height);
+                context.drawImage(img, 0, 0, canvas.width, canvas.height);
+                const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+                const code = jsQR(imageData.data, imageData.width, imageData.height);
+                if (code && code.data) return code.data;
+            }
+            return null;
+        }
+
+        async function importFromImage(file) {
+            const status = document.getElementById('import-image-status');
+            status.textContent = 'Reading QR code...';
+            try {
+                const data = await decodeQRImage(file);
+                if (!data) {
+                    status.textContent = 'No QR code found in the image.';
+                    return;
+                }
+                importString.value = extractQRString(data);
+                importString.dispatchEvent(new Event('input'));
+                status.textContent = 'QR code read. Check the fields and press "Import Template".';
+            } catch (e) {
+                status.textContent = 'Could not read the image.';
+                console.error('Error decoding QR image:', e);
             }
         }
 
@@ -1005,9 +1138,8 @@
                 if (template) {
                     // Use provided template name or default to recipient name
                     const templateName = storeTemplateName.value.trim() || template.n || 'Unnamed Template';
-                    template.template_name = templateName;
                     
-                    templates.push(template);
+                    templates.push(templateFromParsed(template, templateName));
                     saveTemplates();
                     renderTemplates();
                     
