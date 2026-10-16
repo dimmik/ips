@@ -437,8 +437,11 @@
                 </div>
                 <div class="form-group">
                     <label for="import-image">Or QR Code Image:</label>
-                    <input type="file" id="import-image" accept="image/*">
-                    <div class="template-info">You can also paste an image into the field above.</div>
+                    <div class="button-group">
+                        <input type="file" id="import-image" accept="image/*" style="flex: 1; min-width: 200px;">
+                        <button type="button" id="paste-image-btn">Paste Image</button>
+                    </div>
+                    <div class="template-info">Tip: you can also press Ctrl+V / Cmd+V anywhere on the page to paste a QR code image.</div>
                     <div id="import-image-status" class="template-info"></div>
                 </div>
                 <button id="import-btn">Import Template</button>
@@ -920,16 +923,18 @@
                 if (file) importFromImage(file);
                 e.target.value = '';
             });
-            importString.addEventListener('paste', (e) => {
+            document.addEventListener('paste', (e) => {
                 const items = (e.clipboardData && e.clipboardData.items) || [];
                 for (const item of items) {
                     if (item.type.startsWith('image/')) {
                         e.preventDefault();
+                        showTab('import-template');
                         importFromImage(item.getAsFile());
                         return;
                     }
                 }
             });
+            document.getElementById('paste-image-btn').addEventListener('click', pasteImageFromClipboard);
 
             // Template actions (edit, delete, generate QR)
             templatesList.addEventListener('click', (e) => {
@@ -1123,6 +1128,29 @@
             } catch (e) {
                 status.textContent = 'Could not read the image.';
                 console.error('Error decoding QR image:', e);
+            }
+        }
+
+        // Read an image from the clipboard (works on mobile, where Ctrl+V is not available)
+        async function pasteImageFromClipboard() {
+            const status = document.getElementById('import-image-status');
+            if (!navigator.clipboard || !navigator.clipboard.read) {
+                status.textContent = 'Your browser does not allow reading images from the clipboard. Use Ctrl+V / Cmd+V or choose a file.';
+                return;
+            }
+            try {
+                const items = await navigator.clipboard.read();
+                for (const item of items) {
+                    const type = item.types.find(t => t.startsWith('image/'));
+                    if (type) {
+                        importFromImage(await item.getType(type));
+                        return;
+                    }
+                }
+                status.textContent = 'No image in the clipboard.';
+            } catch (e) {
+                status.textContent = 'Could not read the clipboard. Use Ctrl+V / Cmd+V or choose a file.';
+                console.error('Error reading clipboard:', e);
             }
         }
 
