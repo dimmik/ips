@@ -356,10 +356,10 @@
             <div class="dropdown">
                 <button class="dropbtn">+</button>
                 <div class="dropdown-content">
-                    <a href="#" data-tab="templates">Templates</a>
-                    <a href="#" data-tab="add-template">Add New</a>
-                    <a href="#" data-tab="import-template">Import</a>
-                    <a href="#" data-tab="edit-template-container">Edit</a>
+                    <a href="#templates" data-tab="templates">Templates</a>
+                    <a href="#add" data-tab="add-template">Add New</a>
+                    <a href="#import" data-tab="import-template">Import</a>
+                    <a href="#edit" data-tab="edit-template-container">Edit</a>
                 </div>
             </div>
         </div>
@@ -560,12 +560,48 @@
             renderTemplates();
             setupEventListeners();
             processDirectLink();
+            routeFromHash();
+            window.addEventListener('hashchange', routeFromHash);
+        }
+
+        // Tab id <-> URL hash slug
+        const TAB_SLUGS = {
+            'qr-code': 'qr',
+            'templates': 'templates',
+            'add-template': 'add',
+            'import-template': 'import',
+            'edit-template-container': 'edit'
+        };
+
+        function tabIdFromSlug(slug) {
+            return Object.keys(TAB_SLUGS).find(id => TAB_SLUGS[id] === slug);
+        }
+
+        // Show the tab named in the URL hash (#qr, #templates, #add, #import, #edit, #edit/<index>)
+        function routeFromHash() {
+            const [slug, arg] = window.location.hash.replace(/^#/, '').split('/');
+            if (slug === 'edit' && arg !== undefined) {
+                const index = parseInt(arg, 10);
+                if (templates[index]) {
+                    editTemplate(index);
+                } else {
+                    showTab('templates');
+                }
+                return;
+            }
+            showTab(tabIdFromSlug(slug) || 'qr-code', false);
         }
 
         function processDirectLink() {
             const search = window.location.search;
             params = new URLSearchParams(search);
             qr = params.get('qr');
+            if (qr && window.location.hash.replace(/^#/, '').split('/')[0] === 'import') {
+                // ?qr=...#import: prefill the import form instead of showing the QR code
+                importString.value = qr;
+                importString.dispatchEvent(new Event('input'));
+                return;
+            }
             if (qr) {
                 try {
                     const template = parseTemplateString(qr);
@@ -613,7 +649,7 @@
                     document.getElementById('dashed-account-number').textContent = '';
                 }
                 
-                showTab("qr-code");
+                showTab("qr-code", false);
             }
         }
 
@@ -1011,7 +1047,8 @@
             // Manually trigger the display of the dashed account number
             displayDashedAccountNumber(edit_r_field, document.getElementById('dashed-edit-r-field'));
 
-            showTab('edit-template-container');
+            showTab('edit-template-container', false);
+            setTabHash('edit/' + index);
         }
 
         // Update template
@@ -1267,8 +1304,15 @@
             return "";
         }
 
+        // Put the tab into the URL so it can be bookmarked / shared
+        function setTabHash(hash) {
+            if (window.location.hash === '#' + hash) return;
+            history.pushState(null, '', window.location.pathname + window.location.search + '#' + hash);
+        }
+
         // Show a specific tab
-        function showTab(tabId) {
+        function showTab(tabId, updateHash = true) {
+            if (updateHash) setTabHash(TAB_SLUGS[tabId]);
             tabContents.forEach(content => content.classList.remove('active'));
             document.getElementById(tabId).classList.add('active');
 
@@ -1285,7 +1329,6 @@
         // Initialize the app
         window.addEventListener('DOMContentLoaded', () => {
             init();
-            showTab('qr-code');
         });
     </script>
 </body>
