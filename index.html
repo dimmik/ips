@@ -440,6 +440,11 @@
                     <div class="button-group">
                         <input type="file" id="import-image" accept="image/*" style="flex: 1; min-width: 200px;">
                         <button type="button" id="paste-image-btn">Paste Image</button>
+                        <button type="button" id="camera-btn">From Camera</button>
+                    </div>
+                    <div id="camera-container" class="hidden" style="margin-top: 10px;">
+                        <video id="camera-video" playsinline muted style="width: 100%; max-width: 400px; border-radius: 4px; background: #000; display: block;"></video>
+                        <button type="button" id="camera-stop-btn" style="margin-top: 6px;">Stop Camera</button>
                     </div>
                     <div class="template-info">Tip: you can also press Ctrl+V / Cmd+V anywhere on the page to paste a QR code image.</div>
                     <div id="import-image-status" class="template-info"></div>
@@ -971,6 +976,11 @@
                 }
             });
             document.getElementById('paste-image-btn').addEventListener('click', pasteImageFromClipboard);
+            document.getElementById('camera-btn').addEventListener('click', startCamera);
+            document.getElementById('camera-stop-btn').addEventListener('click', () => {
+                stopCamera();
+                document.getElementById('import-image-status').textContent = '';
+            });
 
             // Template actions (edit, delete, generate QR)
             templatesList.addEventListener('click', (e) => {
@@ -1168,6 +1178,77 @@
             }
         }
 
+        // Scan a QR code live from the camera
+        let cameraStream = null;
+        let cameraScanTimer = null;
+
+        async function startCamera() {
+            const status = document.getElementById('import-image-status');
+            if (cameraStream) return;
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                status.textContent = 'Camera is not available in this browser (it also requires HTTPS).';
+                return;
+            }
+            status.textContent = 'Starting camera...';
+            try {
+                const [jsQR, stream] = await Promise.all([
+                    loadQRDecoder(),
+                    navigator.mediaDevices.getUserMedia({
+                        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
+                        audio: false
+                    })
+                ]);
+                cameraStream = stream;
+                const video = document.getElementById('camera-video');
+                video.srcObject = stream;
+                await video.play();
+                document.getElementById('camera-container').classList.remove('hidden');
+                status.textContent = 'Point the camera at the QR code...';
+
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d', { willReadFrequently: true });
+                const scan = () => {
+                    if (!cameraStream) return;
+                    if (video.readyState >= video.HAVE_ENOUGH_DATA && video.videoWidth) {
+                        // Downscale large frames to keep decoding fast
+                        const scale = Math.min(1, 800 / Math.max(video.videoWidth, video.videoHeight));
+                        canvas.width = Math.round(video.videoWidth * scale);
+                        canvas.height = Math.round(video.videoHeight * scale);
+                        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                        const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' });
+                        if (code && code.data) {
+                            stopCamera();
+                            if (navigator.vibrate) navigator.vibrate(100);
+                            importString.value = extractQRString(code.data);
+                            importString.dispatchEvent(new Event('input'));
+                            status.textContent = 'QR code read. Check the fields and press "Import Template".';
+                            return;
+                        }
+                    }
+                    cameraScanTimer = setTimeout(scan, 150);
+                };
+                scan();
+            } catch (e) {
+                stopCamera();
+                status.textContent = e && e.name === 'NotAllowedError'
+                    ? 'Camera access was denied.'
+                    : 'Could not start the camera.';
+                console.error('Error starting camera:', e);
+            }
+        }
+
+        function stopCamera() {
+            clearTimeout(cameraScanTimer);
+            if (cameraStream) {
+                cameraStream.getTracks().forEach(t => t.stop());
+                cameraStream = null;
+            }
+            const video = document.getElementById('camera-video');
+            video.srcObject = null;
+            document.getElementById('camera-container').classList.add('hidden');
+        }
+
         // Read an image from the clipboard (works on mobile, where Ctrl+V is not available)
         async function pasteImageFromClipboard() {
             const status = document.getElementById('import-image-status');
@@ -1313,6 +1394,7 @@
         // Show a specific tab
         function showTab(tabId, updateHash = true) {
             if (updateHash) setTabHash(TAB_SLUGS[tabId]);
+            if (tabId !== 'import-template' && cameraStream) stopCamera();
             tabContents.forEach(content => content.classList.remove('active'));
             document.getElementById(tabId).classList.add('active');
 
