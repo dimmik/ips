@@ -1203,6 +1203,7 @@
                 video.srcObject = stream;
                 await video.play();
                 document.getElementById('camera-container').classList.remove('hidden');
+                document.getElementById('camera-container').scrollIntoView({ behavior: 'smooth', block: 'center' });
                 status.textContent = 'Point the camera at the QR code...';
 
                 const canvas = document.createElement('canvas');
