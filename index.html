@@ -489,12 +489,12 @@
                         <input type="text" id="qr-edit-s" required>
                     </div>
                 </form>
-                <div id="store-template-container" class="hidden store-template-section">
+                <div id="store-template-container" class="store-template-section">
                     <div class="template-name-input">
                         <label for="store-template-name">Template Name:</label>
                         <input type="text" id="store-template-name" placeholder="Enter template name">
                     </div>
-                    <button id="store-template-btn" class="store-btn">Store as Template</button>
+                    <button id="store-template-btn" class="store-btn">Save as Template</button>
                 </div>
             </div>
         </div>
@@ -608,54 +608,73 @@
                 return;
             }
             if (qr) {
-                try {
-                    const template = parseTemplateString(qr);
-                    if (template) {
-                        document.getElementById('qr-edit-r').value = template.r;
-                        document.getElementById('qr-edit-p').value = template.p;
-                        document.getElementById('qr-edit-n').value = template.n;
-                        document.getElementById('qr-edit-i').value = parseIPSAmount(template.i);
-                        document.getElementById('qr-edit-sf').value = template.sf;
-                        document.getElementById('qr-edit-s').value = template.s;
-
-                        updateDynamicQR();
-                        
-                        storeTemplateContainer.classList.remove('hidden');
-                        currentQRString = qr;
-                        
-                        if (template.n) {
-                            storeTemplateName.value = template.n;
-                        }
-                    }
-                } catch (e) {
-                    storeTemplateContainer.classList.add('hidden');
-                    console.error('Invalid template format:', e);
-
-                    // Show QR for raw string
-                    document.getElementById("any-qr-code-string").textContent = qr;
-                    const canvas = document.getElementById("any-qr-code");
-                    const context = canvas.getContext('2d');
-                    context.clearRect(0, 0, canvas.width, canvas.height);
-                    QRCode.toCanvas(canvas, qr, {
-                        width: 200,
-                        errorCorrectionLevel: 'H'
-                    }, function (error) {
-                        if (error) console.error(error);
-                    });
-                    currentQRString = qr;
-
-                    // Show error message
-                    const validationContainer = document.getElementById('validation-message-container');
-                    validationContainer.textContent = "Invalid IPS code format in URL. You can create a new one manually below.";
-
-                    // Ensure form is visible and empty
-                    const form = document.getElementById('qr-edit-form');
-                    form.reset();
-                    document.getElementById('dashed-account-number').textContent = '';
-                }
-                
+                loadQRIntoForm(qr);
                 showTab("qr-code", false);
             }
+        }
+
+        // Fill the QR Code tab from an IPS string (raw strings that are not IPS are shown as-is)
+        function loadQRIntoForm(qr) {
+                try {
+                const template = parseTemplateString(qr);
+                if (template) {
+                    document.getElementById('qr-edit-r').value = template.r;
+                    document.getElementById('qr-edit-p').value = template.p;
+                    document.getElementById('qr-edit-n').value = template.n;
+                    document.getElementById('qr-edit-i').value = parseIPSAmount(template.i);
+                    document.getElementById('qr-edit-sf').value = template.sf;
+                    document.getElementById('qr-edit-s').value = template.s;
+
+                    updateDynamicQR();
+                    currentQRString = qr;
+                    
+                    if (template.n) {
+                        storeTemplateName.value = template.n;
+                    }
+                }
+                } catch (e) {
+                console.error('Invalid template format:', e);
+
+                // Show QR for raw string
+                document.getElementById("any-qr-code-string").textContent = qr;
+                const canvas = document.getElementById("any-qr-code");
+                const context = canvas.getContext('2d');
+                context.clearRect(0, 0, canvas.width, canvas.height);
+                QRCode.toCanvas(canvas, qr, {
+                    width: 200,
+                    errorCorrectionLevel: 'H'
+                }, function (error) {
+                    if (error) console.error(error);
+                });
+                currentQRString = qr;
+
+                // Show error message
+                const validationContainer = document.getElementById('validation-message-container');
+                validationContainer.textContent = "Invalid IPS code format in URL. You can create a new one manually below.";
+
+                // Ensure form is visible and empty
+                const form = document.getElementById('qr-edit-form');
+                form.reset();
+                document.getElementById('dashed-account-number').textContent = '';
+                }
+        }
+
+        // A QR code was scanned (image or camera): open it on the QR Code tab
+        function handleScannedQR(data) {
+            const status = document.getElementById('import-image-status');
+            const qr = extractQRString(data);
+            try {
+                parseTemplateString(qr);
+            } catch (e) {
+                importString.value = qr;
+                importString.dispatchEvent(new Event('input'));
+                status.textContent = 'QR code read, but it is not a valid IPS payment code.';
+                return;
+            }
+            status.textContent = '';
+            loadQRIntoForm(qr);
+            showTab('qr-code');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         function getNormalizedAccountNumber(value) {
@@ -1169,9 +1188,7 @@
                     status.textContent = 'No QR code found in the image.';
                     return;
                 }
-                importString.value = extractQRString(data);
-                importString.dispatchEvent(new Event('input'));
-                status.textContent = 'QR code read. Check the fields and press "Import Template".';
+                handleScannedQR(data);
             } catch (e) {
                 status.textContent = 'Could not read the image.';
                 console.error('Error decoding QR image:', e);
@@ -1221,9 +1238,7 @@
                         if (code && code.data) {
                             stopCamera();
                             if (navigator.vibrate) navigator.vibrate(100);
-                            importString.value = extractQRString(code.data);
-                            importString.dispatchEvent(new Event('input'));
-                            status.textContent = 'QR code read. Check the fields and press "Import Template".';
+                            handleScannedQR(code.data);
                             return;
                         }
                     }
